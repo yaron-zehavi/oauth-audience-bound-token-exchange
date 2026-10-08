@@ -1,0 +1,3 @@
+# Automatically generated CODEOWNERS
+# Regenerate with `make update-codeowners`
+draft-zehavi-oauth-audience-bound-token-exchange.md yaron.zehavi@rbinternational.com
