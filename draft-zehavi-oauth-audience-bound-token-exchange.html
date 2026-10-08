@@ -4,16 +4,20 @@
 <meta charset="utf-8">
 <meta content="Common,Latin" name="scripts">
 <meta content="initial-scale=1.0" name="viewport">
-<title>TODO - Your title</title>
-<meta content="Your Name Here" name="author">
+<title>OAuth 2.0 Audience-Bound Token Exchange</title>
+<meta content="Yaron Zehavi" name="author">
 <meta content="
-       TODO Abstract 
+       In deployments where resource servers are invoked using access tokens with a restricted audience, resource servers that need to call downstream services must first exchange received tokens so their audience is appropriate for the downstream service. 
+       Authorization servers that support OAuth 2.0 Token Exchange   need to ensure that only authorized clients can exchange a subject token, to prevent misuse by unauthorized parties. 
+       This document defines a model in which authorization to perform token exchange is anchored in the audience claim of the subject token. An authorization server determines whether the token exchange client is associated with the audience-restricted protected resource identified by the subject token, then applies additional policy. 
+       This relationship can be established by authorization server local policy, by validating a JWT presented by the token exchange client using the protected resource's  jwks_uri , or by using a new OAuth 2.0 Protected Resource Metadata parameter that identifies token exchange clients for the protected resource. 
     " name="description">
 <meta content="xml2rfc 3.34.1" name="generator">
-<meta content="next generation" name="keyword">
-<meta content="unicorn" name="keyword">
-<meta content="AI-native" name="keyword">
-<meta content="draft-todo-yourname-protocol-latest" name="ietf.draft">
+<meta content="OAuth" name="keyword">
+<meta content="token exchange" name="keyword">
+<meta content="protected resource metadata" name="keyword">
+<meta content="audience" name="keyword">
+<meta content="draft-zehavi-oauth-audience-bound-token-exchange-latest" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.1
     Python 3.14.8
@@ -1042,11 +1046,11 @@ svg {
 <table class="ears">
 <thead><tr>
 <td class="left">Internet-Draft</td>
-<td class="center">TODO - Abbreviation</td>
+<td class="center">OAuth 2.0 Audience-Bound Token Exchange</td>
 <td class="right">October 2026</td>
 </tr></thead>
 <tfoot><tr>
-<td class="left">Here</td>
+<td class="left">Zehavi</td>
 <td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
@@ -1055,30 +1059,33 @@ svg {
 <div id="internal-metadata" class="document-information">
 <dl id="identifiers">
 <dt class="label-workgroup">Workgroup:</dt>
-<dd class="workgroup">WG Working Group</dd>
+<dd class="workgroup">Web Authorization Protocol</dd>
 <dt class="label-internet-draft">Internet-Draft:</dt>
-<dd class="internet-draft">draft-todo-yourname-protocol-latest</dd>
+<dd class="internet-draft">draft-zehavi-oauth-audience-bound-token-exchange-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
 <time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
-<dd class="intended-status">Informational</dd>
+<dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
 <dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
-      <div class="author-name">Y. N. Here</div>
-<div class="org">Your Organization Here</div>
+      <div class="author-name">Y. Zehavi</div>
+<div class="org">Raiffeisen Bank International</div>
 </div>
 </dd>
 </dl>
 </div>
-<h1 id="title">TODO - Your title</h1>
+<h1 id="title">OAuth 2.0 Audience-Bound Token Exchange</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">TODO Abstract<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-1">In deployments where resource servers are invoked using access tokens with a restricted audience, resource servers that need to call downstream services must first exchange received tokens so their audience is appropriate for the downstream service.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-2">Authorization servers that support OAuth 2.0 Token Exchange <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> need to ensure that only authorized clients can exchange a subject token, to prevent misuse by unauthorized parties.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
+<p id="section-abstract-3">This document defines a model in which authorization to perform token exchange is anchored in the audience claim of the subject token. An authorization server determines whether the token exchange client is associated with the audience-restricted protected resource identified by the subject token, then applies additional policy.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
+<p id="section-abstract-4">This relationship can be established by authorization server local policy, by validating a JWT presented by the token exchange client using the protected resource's <code>jwks_uri</code>, or by using a new OAuth 2.0 Protected Resource Metadata parameter that identifies token exchange clients for the protected resource.<a href="#section-abstract-4" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1086,14 +1093,15 @@ svg {
       </h2>
 <p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
 <p id="section-note.1-2">
-        The latest revision of this draft can be found at <span><a href="https://example.com/LATEST">https://example.com/LATEST</a></span>.
-        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-todo-yourname-protocol/">https://datatracker.ietf.org/doc/draft-todo-yourname-protocol/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+        The latest revision of this draft can be found at <span><a href="https://yaron-zehavi.github.io/oauth-audience-bound-token-exchange/draft-zehavi-oauth-audience-bound-token-exchange.html">https://yaron-zehavi.github.io/oauth-audience-bound-token-exchange/draft-zehavi-oauth-audience-bound-token-exchange.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-zehavi-oauth-audience-bound-token-exchange/">https://datatracker.ietf.org/doc/draft-zehavi-oauth-audience-bound-token-exchange/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
 <p id="section-note.1-3">
         Discussion of this document takes place on the
-        WG Working Group mailing list (<span><a href="mailto:WG@example.com">mailto:WG@example.com</a></span>),
-        which is archived at <span><a href="https://example.com/WG">https://example.com/WG</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+        Web Authorization Protocol Working Group mailing list (<span><a href="mailto:oauth@ietf.org">mailto:oauth@ietf.org</a></span>),
+        which is archived at <span><a href="https://mailarchive.ietf.org/arch/browse/oauth/">https://mailarchive.ietf.org/arch/browse/oauth/</a></span>.
+        Subscribe at <span><a href="https://www.ietf.org/mailman/listinfo/oauth/">https://www.ietf.org/mailman/listinfo/oauth/</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
 <p id="section-note.1-4">Source for this draft and an issue tracker can be found at
-        <span><a href="https://github.com/USER/REPO">https://github.com/USER/REPO</a></span>.<a href="#section-note.1-4" class="pilcrow">¶</a></p>
+        <span><a href="https://github.com/yaron-zehavi/oauth-audience-bound-token-exchange">https://github.com/yaron-zehavi/oauth-audience-bound-token-exchange</a></span>.<a href="#section-note.1-4" class="pilcrow">¶</a></p>
 </section>
 <div id="status-of-memo">
 <section id="section-boilerplate.1">
@@ -1147,39 +1155,159 @@ svg {
             <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
-            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-definitions" class="internal xref">Conventions and Definitions</a></p>
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-requirements-notation-and-c" class="internal xref">Requirements Notation and Conventions</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
-            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-scope" class="internal xref">Scope</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
-            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-terminology" class="internal xref">Terminology</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
-            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-overview" class="internal xref">Overview</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
-            <p id="section-toc.1-1.6.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-subject-token-audience-proc" class="internal xref">Subject Token Audience Processing</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-https-and-non-https-audienc" class="internal xref">HTTPS and Non-HTTPS Audience Values</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
-            <p id="section-toc.1-1.7.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-establishing-the-audience-c" class="internal xref">Establishing the Audience-Client Relationship</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-local-policy" class="internal xref">Local Policy</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-metadata-discovery" class="internal xref">Metadata Discovery</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-metadata-verification" class="internal xref">Metadata Verification</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-jwt-validation-using-jwks_u" class="internal xref">JWT Validation Using <code>jwks_uri</code></a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-protected-resource-metadata" class="internal xref">Protected Resource Metadata</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-token_exchange_clients-meta" class="internal xref"><code>token_exchange_clients</code> Metadata Parameter</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-metadata-example" class="internal xref">Metadata Example</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
+                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-selecting-a-token-exchange-" class="internal xref">Selecting a Token Exchange Client Entry</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.4">
+                <p id="section-toc.1-1.9.2.4.1"><a href="#section-9.4" class="auto internal xref">9.4</a>.  <a href="#name-client-comparison" class="internal xref">Client Comparison</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-token-exchange-processing" class="internal xref">Token Exchange Processing</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-error-handling" class="internal xref">Error Handling</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-relationship-to-may_act" class="internal xref">Relationship to <code>may_act</code></a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
+                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-protected-resource-metadata-" class="internal xref">Protected Resource Metadata Does Not Establish Audience Validity</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2">
+                <p id="section-toc.1-1.12.2.2.1"><a href="#section-12.2" class="auto internal xref">12.2</a>.  <a href="#name-metadata-substitution" class="internal xref">Metadata Substitution</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.3">
+                <p id="section-toc.1-1.12.2.3.1"><a href="#section-12.3" class="auto internal xref">12.3</a>.  <a href="#name-server-side-request-forgery" class="internal xref">Server-Side Request Forgery</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.4">
+                <p id="section-toc.1-1.12.2.4.1"><a href="#section-12.4" class="auto internal xref">12.4</a>.  <a href="#name-multiple-audience-values" class="internal xref">Multiple Audience Values</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.5">
+                <p id="section-toc.1-1.12.2.5.1"><a href="#section-12.5" class="auto internal xref">12.5</a>.  <a href="#name-confidentiality-of-metadata" class="internal xref">Confidentiality of Metadata</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-oauth-protected-resource-me" class="internal xref">OAuth Protected Resource Metadata Registration</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-acknowledgements" class="internal xref">Acknowledgements</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.1">
+                <p id="section-toc.1-1.15.2.1.1"><a href="#section-15.1" class="auto internal xref">15.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2">
+                <p id="section-toc.1-1.15.2.2.1"><a href="#section-15.2" class="auto internal xref">15.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-examples" class="internal xref">Examples</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.1">
+                <p id="section-toc.1-1.16.2.1.1"><a href="#appendix-A.1" class="auto internal xref">A.1</a>.  <a href="#name-example-token_exchange_clie" class="internal xref">Example: <code>token_exchange_clients</code></a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.2">
+                <p id="section-toc.1-1.16.2.2.1"><a href="#appendix-A.2" class="auto internal xref">A.2</a>.  <a href="#name-example-jwt-validation-usin" class="internal xref">Example: JWT Validation Using <code>jwks_uri</code></a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.3">
+                <p id="section-toc.1-1.16.2.3.1"><a href="#appendix-A.3" class="auto internal xref">A.3</a>.  <a href="#name-example-jwks_uri-and-token_" class="internal xref">Example: <code>jwks_uri</code> and <code>token_exchange_clients</code></a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
+            <p id="section-toc.1-1.18.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
 </section>
 </div>
-<div id="intro">
+<div id="introduction">
 <section id="section-1">
       <h2 id="name-introduction">
 <a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
       </h2>
-<p id="section-1-1">TODO Introduction<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-1">OAuth 2.0 access tokens are commonly issued for a specific protected resource, identified by the token’s <code>aud</code> claim. Often that resource needs to call downstream services. Because an access token audience-restricted to the protected resource is not suitable for a downstream service, the resource server must obtain a new token with the appropriate audience. OAuth 2.0 Token Exchange <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> provides this mechanism.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">When processing a token exchange request, the authorization server must determine whether the requesting client is permitted to exchange the subject token. Otherwise unauthorized parties in possession of a subject token could attempt to exchange it for a new token and potentially bypass the original audience restriction. Sender-constraining the subject token to the original client does not remove this risk, because such proof demonstrates possession by the client to which the subject token was issued and does not establish that the protected resource receiving the token is permitted to exchange it.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">The Token Exchange <code>may_act</code> claim can explicitly identify an authorized actor. However, the original token issuer cannot know in advance which authorization server will process a later exchange request, or which client identifier that server uses for the protected resource. This makes <code>may_act</code> difficult to use when a protected resource calls multiple downstream services protected by different authorization servers.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">This document specifies an audience-anchored model for determining whether a client may exchange a subject token. In this model, the authorization server uses the subject token’s audience to identify the protected resource, establishes whether the token exchange client is associated with that protected resource, then applies additional authorization policy.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">This relationship can be established in three ways.<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-6">First, the authorization server can use local policy. For example, the authorization server can be configured to allow a particular client identifier to exchange subject tokens whose audience is a particular protected resource.<a href="#section-1-6" class="pilcrow">¶</a></p>
+<p id="section-1-7">Second, when the protected resource metadata contains a <code>jwks_uri</code>, the authorization server can use the keys referenced by that <code>jwks_uri</code> to validate a JWT presented by the token exchange client. If the JWT is accepted as an <code>actor_token</code> or as a client assertion, the authorization server can establish that the presenter is associated with the protected resource identified by the subject token audience.<a href="#section-1-7" class="pilcrow">¶</a></p>
+<p id="section-1-8">Third, the authorization server can use OAuth 2.0 Protected Resource Metadata <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>. This document defines a new protected-resource metadata parameter that allows a protected resource to publish the OAuth client identifiers that represent it for token exchange at one or more authorization servers.<a href="#section-1-8" class="pilcrow">¶</a></p>
+<p id="section-1-9">The authorization server can use any of these mechanisms, together with its own trust and policy checks, to verify that the client is permitted to exchange a subject token whose audience identifies that protected resource.<a href="#section-1-9" class="pilcrow">¶</a></p>
+<p id="section-1-10">This specification does not define a new access token claim, actor chain, actor proof, or actor receipt, nor does it change the semantics of the <code>act</code> or <code>may_act</code> claims used by OAuth 2.0 Token Exchange. Instead, it defines mechanisms and authorization-server processing rules for establishing the relationship between a subject token audience and a token exchange client.<a href="#section-1-10" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="conventions-and-definitions">
+<div id="requirements-notation-and-conventions">
 <section id="section-2">
-      <h2 id="name-conventions-and-definitions">
-<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-definitions" class="section-name selfRef">Conventions and Definitions</a>
+      <h2 id="name-requirements-notation-and-c">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-requirements-notation-and-c" class="section-name selfRef">Requirements Notation and Conventions</a>
       </h2>
 <p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
 "<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
@@ -1187,58 +1315,784 @@ described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</s
 appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="security">
+<div id="scope">
 <section id="section-3">
-      <h2 id="name-security-considerations">
-<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      <h2 id="name-scope">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-scope" class="section-name selfRef">Scope</a>
       </h2>
-<p id="section-3-1">TODO Security<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-1">This specification defines how an authorization server establishes a relationship between the audience of a subject token and the OAuth client requesting OAuth 2.0 Token Exchange, in order to evaluate whether that client is permitted to exchange the subject token.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">This specification defines:<a href="#section-3-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-3.1">
+          <p id="section-3-3.1.1">how audience values from the subject token are used to identify the protected resource context;<a href="#section-3-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.2">
+          <p id="section-3-3.2.1">how local policy can establish the relationship between a protected resource audience and a token exchange client;<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.3">
+          <p id="section-3-3.3.1">how validation of a JWT using a protected resource's <code>jwks_uri</code> can establish the relationship between the protected resource audience and the token exchange client;<a href="#section-3-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.4">
+          <p id="section-3-3.4.1">a protected-resource metadata parameter named <code>token_exchange_clients</code>;<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.5">
+          <p id="section-3-3.5.1">how an authorization server selects entries from that metadata; and<a href="#section-3-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.6">
+          <p id="section-3-3.6.1">how the selected entry is compared to the token exchange client.<a href="#section-3-3.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-3-4">This specification does not define:<a href="#section-3-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-5.1">
+          <p id="section-3-5.1.1">a new access token claim;<a href="#section-3-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-5.2">
+          <p id="section-3-5.2.1">a replacement for the <code>act</code> or <code>may_act</code> claims defined by <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>;<a href="#section-3-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-5.3">
+          <p id="section-3-5.3.1">actor-chain representation; or<a href="#section-3-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-5.4">
+          <p id="section-3-5.4.1">token exchange grant semantics beyond those already defined by <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>.<a href="#section-3-5.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
 </section>
 </div>
-<div id="iana">
+<div id="terminology">
 <section id="section-4">
-      <h2 id="name-iana-considerations">
-<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      <h2 id="name-terminology">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-terminology" class="section-name selfRef">Terminology</a>
       </h2>
-<p id="section-4-1">This document has no IANA actions.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-1">This document uses the terms "client", "authorization server", "protected resource", "resource server", "access token", and "scope" as defined by OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">This document uses the term "token exchange" as defined by <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>.<a href="#section-4-2" class="pilcrow">¶</a></p>
+<p id="section-4-3">This document uses the term "protected resource metadata" as defined by <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>.<a href="#section-4-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4-4">
+        <dt id="section-4-4.1">Subject Token:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-4.2">
+          <p id="section-4-4.2.1">The token presented to the authorization server in a token exchange request as the "subject_token" parameter defined by <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>.<a href="#section-4-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-4.3">Subject Token Audience:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-4.4">
+          <p id="section-4-4.4.1">The audience value, or values, of the subject token. For JWT subject tokens, this is the "aud" claim defined by <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>.<a href="#section-4-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-4.5">Selected Protected Resource Identifier:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-4.6">
+          <p id="section-4-4.6.1">The single audience value selected by the authorization server as the protected resource context for the token exchange request.<a href="#section-4-4.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-4.7">Token Exchange Client:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-4.8">
+          <p id="section-4-4.8.1">An OAuth client that requests OAuth 2.0 Token Exchange for subject tokens.<a href="#section-4-4.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-4.9">Audience-Client Relationship:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-4.10">
+          <p id="section-4-4.10.1">A relationship, accepted by the authorization server, between the selected protected resource identifier from the subject token audience and the token exchange client.<a href="#section-4-4.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-4.11">Resource Key-Bound JWT:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-4.12">
+          <p id="section-4-4.12.1">A JWT presented by the token exchange client and validated using keys obtained from the protected resource's <code>jwks_uri</code>.<a href="#section-4-4.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-4.13">Authorization-Server Local Client Identifier:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-4.14">
+          <p id="section-4-4.14.1">A client identifier whose value is scoped to a specific authorization server.<a href="#section-4-4.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-4.15">Globally Scoped Client Identifier:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-4.16">
+          <p id="section-4-4.16.1">A CIMD client identifier <span>[<a href="#I-D.ietf-oauth-client-id-metadata-document" class="cite xref">I-D.ietf-oauth-client-id-metadata-document</a>]</span>, whose value is not scoped to a specific authorization server.<a href="#section-4-4.16.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
 </section>
 </div>
-<div id="sec-normative-references">
+<div id="overview">
 <section id="section-5">
-      <h2 id="name-normative-references">
-<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+      <h2 id="name-overview">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-overview" class="section-name selfRef">Overview</a>
       </h2>
+<p id="section-5-1">An authorization server processing a token exchange request needs to determine whether the token exchange client is associated with the protected resource identified by the subject token audience. This document calls this the audience-client relationship.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">The audience-client relationship can be established by one or more of the following mechanisms:<a href="#section-5-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5-3">
+<li id="section-5-3.1">
+          <p id="section-5-3.1.1">local policy;<a href="#section-5-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-3.2">
+          <p id="section-5-3.2.1">validation of a JWT presented by the token exchange client using keys obtained from the protected resource's <code>jwks_uri</code>; or<a href="#section-5-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-3.3">
+          <p id="section-5-3.3.1">a <code>token_exchange_clients</code> protected-resource metadata parameter.<a href="#section-5-3.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-5-4">An authorization server processing a token exchange request performs the following high-level steps:<a href="#section-5-4" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5-5">
+<li id="section-5-5.1">
+          <p id="section-5-5.1.1">validates the subject token according to normal token exchange policy;<a href="#section-5-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-5.2">
+          <p id="section-5-5.2.1">obtains protected-resource metadata for the selected protected resource identifier, if metadata-based processing is used;<a href="#section-5-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-5.3">
+          <p id="section-5-5.3.1">establishes the audience-client relationship using local policy, resource key-bound JWT validation, <code>token_exchange_clients</code>, or a combination of these mechanisms;<a href="#section-5-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-5.4">
+          <p id="section-5-5.4.1">applies all remaining token exchange policy before issuing an exchanged token.<a href="#section-5-5.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-5-6">The mechanisms defined by this specification only establish that the token exchange client is associated with the protected resource audience. They do not by themselves authorize the requested token audience, scopes, subject, actor chain, or delegation semantics.<a href="#section-5-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="subject-token-audience-processing">
+<section id="section-6">
+      <h2 id="name-subject-token-audience-proc">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-subject-token-audience-proc" class="section-name selfRef">Subject Token Audience Processing</a>
+      </h2>
+<p id="section-6-1">Considering the <code>aud</code> claim value may be an array, the authorization server <span class="bcp14">MUST</span> determine the protected resource audience of the subject token before applying this specification.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">If the subject token contains an "aud" claim whose value is a string, the authorization server treats that value as the candidate protected resource identifier.<a href="#section-6-2" class="pilcrow">¶</a></p>
+<p id="section-6-3">If the subject token contains an "aud" claim whose value is an array, the authorization server treats each string value in the array as a candidate protected resource identifier.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">If the subject token does not contain an audience value, or if the authorization server cannot determine the protected resource identifier, it <span class="bcp14">MUST NOT</span> use the metadata processing defined by this specification.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">The authorization server <span class="bcp14">MUST</span> identify exactly one selected protected resource identifier for which the token exchange client is permitted to perform token exchange. If no candidate protected resource identifier matches, the authorization server <span class="bcp14">MUST</span> reject the request. If multiple candidate protected resource identifiers match and the authorization server cannot determine the applicable protected resource context unambiguously, the authorization server <span class="bcp14">MUST</span> reject the request.<a href="#section-6-5" class="pilcrow">¶</a></p>
+<div id="https-and-non-https-audience-values">
+<section id="section-6.1">
+        <h3 id="name-https-and-non-https-audienc">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-https-and-non-https-audienc" class="section-name selfRef">HTTPS and Non-HTTPS Audience Values</a>
+        </h3>
+<p id="section-6.1-1">This specification does not require all subject token audience values to be HTTPS URIs. However, protected-resource metadata discovery <span class="bcp14">MUST</span> only be performed for candidate protected resource identifiers that are HTTPS URIs and that are acceptable to the authorization server according to local policy.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<p id="section-6.1-2">The authorization server <span class="bcp14">MUST NOT</span> dereference arbitrary non-HTTPS audience values as protected-resource metadata locations.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+<p id="section-6.1-3">If a subject token audience value is not an HTTPS URI, the authorization server <span class="bcp14">MAY</span> use local policy to associate that audience value with a protected resource and with a permitted token exchange client.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<p id="section-6.1-4">For example, the following audience value can be used with local policy:<a href="#section-6.1-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6.1-5">
+<pre>
+{
+  "aud": "api://orders"
+}
+</pre><a href="#section-6.1-5" class="pilcrow">¶</a>
+</div>
+<p id="section-6.1-6">The authorization server can have local policy equivalent to:<a href="#section-6.1-6" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-6.1-7">
+<pre>
+api://orders -&gt; rs-orders-client
+</pre><a href="#section-6.1-7" class="pilcrow">¶</a>
+</div>
+<p id="section-6.1-8">The authorization server <span class="bcp14">MUST NOT</span> attempt to dereference "api://orders" as protected-resource metadata.<a href="#section-6.1-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="establishing-the-audience-client-relationship">
+<section id="section-7">
+      <h2 id="name-establishing-the-audience-c">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-establishing-the-audience-c" class="section-name selfRef">Establishing the Audience-Client Relationship</a>
+      </h2>
+<p id="section-7-1">Before issuing an exchanged token, the authorization server <span class="bcp14">MUST</span> establish a relationship between the selected protected resource identifier and the token exchange client. If the subject token contains a <code>may_act</code> claim, the authorization server <span class="bcp14">MUST</span> evaluate it according to <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> and local policy.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">A <code>may_act</code> claim that identifies a permitted actor takes precedence over the audience-client relationship mechanisms defined in this specification for determining which actor is explicitly authorized by the subject token.<a href="#section-7-2" class="pilcrow">¶</a></p>
+<p id="section-7-3">The authorization server <span class="bcp14">MAY</span> establish the audience-client relationship using one or more of the following mechanisms:<a href="#section-7-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-4.1">
+          <p id="section-7-4.1.1">local policy;<a href="#section-7-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-4.2">
+          <p id="section-7-4.2.1">validation of a JWT presented by the token exchange client using keys obtained from the protected resource's <code>jwks_uri</code>; or<a href="#section-7-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-4.3">
+          <p id="section-7-4.3.1">the <code>token_exchange_clients</code> protected-resource metadata parameter defined by this specification.<a href="#section-7-4.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-7-5">An authorization server <span class="bcp14">MAY</span> require more than one mechanism to succeed. For example, an authorization server can require that the client match an entry in <code>token_exchange_clients</code> and that a client assertion be validated using the protected resource's <code>jwks_uri</code>.<a href="#section-7-5" class="pilcrow">¶</a></p>
+<p id="section-7-6">If none of the mechanisms accepted by authorization server policy establishes the relationship between the selected protected resource identifier and the token exchange client, the authorization server <span class="bcp14">MUST</span> reject the token exchange request.<a href="#section-7-6" class="pilcrow">¶</a></p>
+<p id="section-7-7">Establishing the audience-client relationship does not by itself authorize issuance of an exchanged token. The authorization server <span class="bcp14">MUST</span> also apply all other token exchange policy, including policy for the requested audience, resource, scope, subject, actor, delegation model, and consent.<a href="#section-7-7" class="pilcrow">¶</a></p>
+<div id="local-policy">
+<section id="section-7.1">
+        <h3 id="name-local-policy">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-local-policy" class="section-name selfRef">Local Policy</a>
+        </h3>
+<p id="section-7.1-1">An authorization server <span class="bcp14">MAY</span> use local policy to determine the token exchange client for a selected protected resource identifier. The authorization server <span class="bcp14">MUST</span> compare the client making the token exchange request to the client identifier identified by local policy. If the client does not match, the authorization server <span class="bcp14">MUST</span> reject the token exchange request.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.1-2">Local policy can be used for HTTPS and non-HTTPS audience values.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="metadata-discovery">
+<section id="section-8">
+      <h2 id="name-metadata-discovery">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-metadata-discovery" class="section-name selfRef">Metadata Discovery</a>
+      </h2>
+<p id="section-8-1">When the selected protected resource identifier is an HTTPS URI, the authorization server <span class="bcp14">MAY</span> obtain protected-resource metadata for that identifier using OAuth 2.0 Protected Resource Metadata <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2">The authorization server constructs the protected-resource metadata URL from the selected protected resource identifier as specified in <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>. If the identifier has no path or query component, the metadata URL is formed by appending <code>/.well-known/oauth-protected-resource</code> to the origin. For example, the identifier:<a href="#section-8-2" class="pilcrow">¶</a></p>
+<p id="section-8-3"><code>https://resource.example.com</code><a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">corresponds to the metadata URL:<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-5"><code>https://resource.example.com/.well-known/oauth-protected-resource</code><a href="#section-8-5" class="pilcrow">¶</a></p>
+<p id="section-8-6">If the identifier contains a path or query component, the authorization server <span class="bcp14">MUST</span> insert <code>/.well-known/oauth-protected-resource</code> after the host component and before the path or query component. The authorization server <span class="bcp14">MUST NOT</span> remove the path component before constructing the metadata URL. For example, the identifier:<a href="#section-8-6" class="pilcrow">¶</a></p>
+<p id="section-8-7"><code>https://resource.example.com/resource1</code><a href="#section-8-7" class="pilcrow">¶</a></p>
+<p id="section-8-8">corresponds to the metadata URL:<a href="#section-8-8" class="pilcrow">¶</a></p>
+<p id="section-8-9"><code>https://resource.example.com/.well-known/oauth-protected-resource/resource1</code><a href="#section-8-9" class="pilcrow">¶</a></p>
+<p id="section-8-10">The authorization server <span class="bcp14">MUST NOT</span> attempt alternative metadata URLs formed by stripping the path component, appending the well-known suffix after the path component, or otherwise modifying the selected protected resource identifier, unless such behavior is explicitly configured by local policy. Metadata obtained from a URL other than the one constructed for the selected protected resource identifier <span class="bcp14">MUST NOT</span> be used to establish that a client is authorized to exchange a subject token for that protected resource.<a href="#section-8-10" class="pilcrow">¶</a></p>
+<div id="metadata-verification">
+<section id="section-8.1">
+        <h3 id="name-metadata-verification">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-metadata-verification" class="section-name selfRef">Metadata Verification</a>
+        </h3>
+<p id="section-8.1-1">The authorization server <span class="bcp14">MUST</span> verify that the "resource" value in the obtained metadata corresponds to the selected protected resource identifier. Metadata whose "resource" value does not correspond to the selected protected resource identifier <span class="bcp14">MUST NOT</span> be used for the authorization decision defined by this specification.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-2">The authorization server <span class="bcp14">MUST NOT</span> use protected-resource metadata as the basis for accepting an otherwise untrusted audience value. The authorization server first determines whether the subject token audience identifies a protected resource that is acceptable according to local policy. Protected-resource metadata can then be used to establish the relationship between that protected resource audience and the token exchange client.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
+<p id="section-8.1-3">Protected-resource metadata can establish this relationship by publishing a <code>jwks_uri</code>, by publishing <code>token_exchange_clients</code>, or by publishing both.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
+<p id="section-8.1-4">When <code>jwks_uri</code> is used, the authorization server <span class="bcp14">MUST</span> verify that the JWT presented by the token exchange client validates with a key obtained from the protected resource's JWK Set document.<a href="#section-8.1-4" class="pilcrow">¶</a></p>
+<p id="section-8.1-5">When <code>token_exchange_clients</code> is used, the authorization server <span class="bcp14">MUST</span> verify that the token exchange client matches an applicable entry in the <code>token_exchange_clients</code> metadata parameter.<a href="#section-8.1-5" class="pilcrow">¶</a></p>
+<p id="section-8.1-6">The authorization server <span class="bcp14">SHOULD</span> cache protected-resource metadata according to HTTP caching semantics and local policy. Cached metadata <span class="bcp14">MUST NOT</span> be used beyond any applicable expiration time or beyond limits established by local policy.<a href="#section-8.1-6" class="pilcrow">¶</a></p>
+<p id="section-8.1-7">The authorization server <span class="bcp14">MUST</span> handle metadata retrieval failure as an authorization failure unless local policy provides another permitted method for establishing the audience-client relationship.<a href="#section-8.1-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="jwt-validation-using-jwksuri">
+<section id="section-8.2">
+        <h3 id="name-jwt-validation-using-jwks_u">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-jwt-validation-using-jwks_u" class="section-name selfRef">JWT Validation Using <code>jwks_uri</code></a>
+        </h3>
+<p id="section-8.2-1">Protected-resource metadata can contain a <code>jwks_uri</code> parameter that identifies the protected resource's JWK Set document. The authorization server <span class="bcp14">MAY</span> use the keys referenced by <code>jwks_uri</code> to validate a JWT presented by the token exchange client:<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.2-2.1">
+            <p id="section-8.2-2.1.1">an <code>actor_token</code>; or<a href="#section-8.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-2.2">
+            <p id="section-8.2-2.2.1">a client assertion.<a href="#section-8.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-8.2-3">If the authorization server validates a client-provided JWT using a key obtained from the <code>jwks_uri</code> in the protected-resource metadata for the selected protected resource identifier, the authorization server <span class="bcp14">MAY</span> treat the JWT validation as establishing the audience-client relationship.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+<p id="section-8.2-4">When using this mechanism, the authorization server <span class="bcp14">MUST</span> verify the protected-resource metadata as described in <a href="#metadata-verification" class="auto internal xref">Section 8.1</a> before using the <code>jwks_uri</code>.<a href="#section-8.2-4" class="pilcrow">¶</a></p>
+<p id="section-8.2-5">The authorization server <span class="bcp14">MUST</span> validate the JWT according to applicable JWT, OAuth, and token exchange rules, including validation of the signature, issuer, audience, expiration time, and any other claims required by local policy.<a href="#section-8.2-5" class="pilcrow">¶</a></p>
+<p id="section-8.2-6">A protected resource that uses JWT validation through <code>jwks_uri</code> <span class="bcp14">MAY</span> omit the <code>token_exchange_clients</code> metadata parameter. In such a case, the authorization server relies on successful JWT validation, together with local policy, to establish the audience-client relationship.<a href="#section-8.2-6" class="pilcrow">¶</a></p>
+<p id="section-8.2-7">If the protected resource metadata includes both <code>jwks_uri</code> and <code>token_exchange_clients</code>, the authorization server <span class="bcp14">SHOULD</span> verify that the token exchange client identified by the JWT is consistent with an applicable <code>token_exchange_clients</code> entry. If the values are inconsistent, the authorization server <span class="bcp14">MUST</span> reject the token exchange request unless local policy explicitly allows the JWT-based mechanism to take precedence.<a href="#section-8.2-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="protected-resource-metadata">
+<section id="section-9">
+      <h2 id="name-protected-resource-metadata">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-protected-resource-metadata" class="section-name selfRef">Protected Resource Metadata</a>
+      </h2>
+<div id="tokenexchangeclients-metadata-parameter">
+<section id="section-9.1">
+        <h3 id="name-token_exchange_clients-meta">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-token_exchange_clients-meta" class="section-name selfRef"><code>token_exchange_clients</code> Metadata Parameter</a>
+        </h3>
+<p id="section-9.1-1">This specification defines the "token_exchange_clients" protected-resource metadata parameter. This parameter is one mechanism for establishing the relationship between a protected resource audience and the OAuth client requesting token exchange. A protected resource <span class="bcp14">MAY</span> omit this parameter when the authorization server can establish the relationship by local policy or by validating a JWT using the protected resource's <code>jwks_uri</code>.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<p id="section-9.1-2">The "token_exchange_clients" parameter is a JSON array. Each array element is a JSON object identifying an OAuth client that represents the protected resource for the purpose of requesting OAuth 2.0 Token Exchange.<a href="#section-9.1-2" class="pilcrow">¶</a></p>
+<p id="section-9.1-3">Each array element has the following attributes:<a href="#section-9.1-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9.1-4">
+          <dt id="section-9.1-4.1">authorization_server:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-4.2">
+            <p id="section-9.1-4.2.1"><span class="bcp14">OPTIONAL</span>. An issuer identifier for the authorization server at which the "client_id" value is scoped. This attribute is <span class="bcp14">REQUIRED</span> when the "client_id" is an authorization-server local client identifier. This attribute <span class="bcp14">MUST</span> be omitted when the "client_id" is a globally scoped client identifier.<a href="#section-9.1-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.1-4.3">client_id:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-4.4">
+            <p id="section-9.1-4.4.1"><span class="bcp14">REQUIRED</span>. The OAuth client identifier that represents the protected resource for token exchange.<a href="#section-9.1-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-9.1-5">If the "authorization_server" attribute is present, the "client_id" value is scoped to the authorization server identified by that attribute.<a href="#section-9.1-5" class="pilcrow">¶</a></p>
+<p id="section-9.1-6">If the "authorization_server" attribute is omitted, the "client_id" value is a globally scoped client identifier <span>[<a href="#I-D.ietf-oauth-client-id-metadata-document" class="cite xref">I-D.ietf-oauth-client-id-metadata-document</a>]</span>.<a href="#section-9.1-6" class="pilcrow">¶</a></p>
+<p id="section-9.1-7">An authorization server <span class="bcp14">MUST</span> ignore any attribute of a "token_exchange_clients" entry that it does not understand.<a href="#section-9.1-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="metadata-example">
+<section id="section-9.2">
+        <h3 id="name-metadata-example">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-metadata-example" class="section-name selfRef">Metadata Example</a>
+        </h3>
+<p id="section-9.2-1">The following example shows a protected resource that publishes both <code>jwks_uri</code> and <code>token_exchange_clients</code>. The <code>jwks_uri</code> enables JWT-based establishment of the audience-client relationship. The <code>token_exchange_clients</code> parameter explicitly identifies clients that represent the protected resource at two authorization servers and by a globally scoped client identifier:<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-9.2-2">
+<pre>
+{
+  "resource": "https://api.example.com",
+  "authorization_servers": [
+    "https://as-a.example",
+    "https://as-b.example"
+  ],
+  "jwks_uri": "https://api.example.com/jwks.json",
+  "token_exchange_clients": [
+    {
+      "authorization_server": "https://as-a.example",
+      "client_id": "rs-client-at-as-a"
+    },
+    {
+      "authorization_server": "https://as-b.example",
+      "client_id": "rs-client-at-as-b"
+    },
+    {
+      "client_id": "https://api.example.com/oauth-client"
+    }
+  ]
+}
+</pre><a href="#section-9.2-2" class="pilcrow">¶</a>
+</div>
+<p id="section-9.2-3">The following example shows a protected resource that relies on JWT-based establishment of the audience-client relationship and therefore omits <code>token_exchange_clients</code>:<a href="#section-9.2-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-9.2-4">
+<pre>
+{
+  "resource": "https://api.example.com",
+  "authorization_servers": [
+    "https://as-a.example"
+  ],
+  "jwks_uri": "https://api.example.com/jwks.json"
+}
+</pre><a href="#section-9.2-4" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="selecting-a-token-exchange-client-entry">
+<section id="section-9.3">
+        <h3 id="name-selecting-a-token-exchange-">
+<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-selecting-a-token-exchange-" class="section-name selfRef">Selecting a Token Exchange Client Entry</a>
+        </h3>
+<p id="section-9.3-1">After obtaining protected-resource metadata containing "token_exchange_clients", the authorization server selects an applicable entry as follows.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
+<p id="section-9.3-2">If an entry contains an "authorization_server" attribute, the authorization server <span class="bcp14">MUST</span> use the entry only if the "authorization_server" value identifies the authorization server processing the token exchange request.<a href="#section-9.3-2" class="pilcrow">¶</a></p>
+<p id="section-9.3-3">If an entry omits the "authorization_server" attribute, the authorization server <span class="bcp14">MUST</span> treat the "client_id" as a globally scoped client identifier <span>[<a href="#I-D.ietf-oauth-client-id-metadata-document" class="cite xref">I-D.ietf-oauth-client-id-metadata-document</a>]</span>.<a href="#section-9.3-3" class="pilcrow">¶</a></p>
+<p id="section-9.3-4">If no applicable entry is found, the authorization server <span class="bcp14">MUST</span> reject the token exchange request unless another mechanism accepted by authorization server policy establishes the audience-client relationship.<a href="#section-9.3-4" class="pilcrow">¶</a></p>
+<p id="section-9.3-5">If multiple applicable entries are found and the authorization server cannot select a single entry unambiguously, the authorization server <span class="bcp14">MUST</span> reject the token exchange request.<a href="#section-9.3-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="client-comparison">
+<section id="section-9.4">
+        <h3 id="name-client-comparison">
+<a href="#section-9.4" class="section-number selfRef">9.4. </a><a href="#name-client-comparison" class="section-name selfRef">Client Comparison</a>
+        </h3>
+<p id="section-9.4-1">When the audience-client relationship is established using <code>token_exchange_clients</code>, the authorization server <span class="bcp14">MUST</span> compare the token exchange client to the <code>client_id</code> value in the selected <code>token_exchange_clients</code> entry.<a href="#section-9.4-1" class="pilcrow">¶</a></p>
+<p id="section-9.4-2">When the selected entry contains an <code>authorization_server</code> attribute, the comparison is made against the authorization-server local client identifier of the token exchange client.<a href="#section-9.4-2" class="pilcrow">¶</a></p>
+<p id="section-9.4-3">When the selected entry omits the <code>authorization_server</code> attribute, the <code>client_id</code> value is a globally scoped client identifier. The authorization server <span class="bcp14">MUST</span> verify that the token exchange client matches a globally scoped client identifier.<a href="#section-9.4-3" class="pilcrow">¶</a></p>
+<p id="section-9.4-4">If both JWT validation and <code>token_exchange_clients</code> are used, the authorization server <span class="bcp14">MUST</span> verify that the token exchange client identified by the JWT is consistent with the applicable <code>token_exchange_clients</code> entry. If the values are inconsistent, the authorization server <span class="bcp14">SHOULD</span> reject the request unless local policy explicitly allows one mechanism to take precedence.<a href="#section-9.4-4" class="pilcrow">¶</a></p>
+<p id="section-9.4-5">If the authorization server cannot establish that the token exchange client matches, or is bound to, the client associated with the selected protected resource identifier, the authorization server <span class="bcp14">MUST</span> reject the token exchange request.<a href="#section-9.4-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="token-exchange-processing">
+<section id="section-10">
+      <h2 id="name-token-exchange-processing">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-token-exchange-processing" class="section-name selfRef">Token Exchange Processing</a>
+      </h2>
+<p id="section-10-1">At token exchange time, the authorization server performs the following checks:<a href="#section-10-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-10-2">
+<li id="section-10-2.1">
+          <p id="section-10-2.1.1">Validate the token exchange request according to <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> and local policy.<a href="#section-10-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-10-2.2">
+          <p id="section-10-2.2.1">Authenticate the client making the token exchange request, if client authentication is required by authorization server policy.<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-10-2.3">
+          <p id="section-10-2.3.1">Validate the subject token according to token format, issuer, audience, expiration, and local policy.<a href="#section-10-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-10-2.4">
+          <p id="section-10-2.4.1">Determine the selected protected resource identifier from the subject token audience, as described in <a href="#subject-token-audience-processing" class="auto internal xref">Section 6</a>.<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-10-2.5">
+          <p id="section-10-2.5.1">Verify that the selected protected resource identifier is acceptable to the authorization server according to local policy.<a href="#section-10-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-10-2.6">
+          <p id="section-10-2.6.1">If metadata-based processing is used, obtain and verify protected-resource metadata for the selected protected resource identifier.<a href="#section-10-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-10-2.7">
+          <p id="section-10-2.7.1">Establish the relationship between the selected protected resource identifier and the token exchange client using one or more of the following:<a href="#section-10-2.7.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10-2.7.2.1">
+              <p id="section-10-2.7.2.1.1">local policy;<a href="#section-10-2.7.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10-2.7.2.2">
+              <p id="section-10-2.7.2.2.1">validation of a JWT presented by the token exchange client using keys obtained from the protected resource's <code>jwks_uri</code>; or<a href="#section-10-2.7.2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10-2.7.2.3">
+              <p id="section-10-2.7.2.3.1">an applicable <code>token_exchange_clients</code> entry.<a href="#section-10-2.7.2.3.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</li>
+        <li id="section-10-2.8">
+          <p id="section-10-2.8.1">If the relationship cannot be established, reject the request.<a href="#section-10-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-10-2.9">
+          <p id="section-10-2.9.1">Apply all remaining token exchange authorization policy.<a href="#section-10-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-10-2.10">
+          <p id="section-10-2.10.1">Issue the exchanged token only if all checks succeed.<a href="#section-10-2.10.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-10-3">Use of the mechanisms defined by this specification only establishes that the token exchange client is associated with the subject token audience for the purpose of requesting token exchange. It does not authorize the issuance of a token for any particular requested resource, scope, subject, or actor chain.<a href="#section-10-3" class="pilcrow">¶</a></p>
+<div id="error-handling">
+<section id="section-10.1">
+        <h3 id="name-error-handling">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-error-handling" class="section-name selfRef">Error Handling</a>
+        </h3>
+<p id="section-10.1-1">If the authorization server rejects the token exchange request because the token exchange client is not permitted to exchange the subject token under this specification, the authorization server <span class="bcp14">SHOULD</span> return the "invalid_request" or "invalid_grant" error code defined by <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>, according to the nature of the failure and local policy.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<p id="section-10.1-2">The authorization server <span class="bcp14">SHOULD NOT</span> disclose sensitive information about protected-resource metadata, configured mappings, keys, or permitted client identifiers in error responses.<a href="#section-10.1-2" class="pilcrow">¶</a></p>
+<p id="section-10.1-3">For example, the authorization server can return:<a href="#section-10.1-3" class="pilcrow">¶</a></p>
+<div class="lang-http-message sourcecode" id="section-10.1-4">
+<pre>
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{
+  "error": "invalid_grant",
+  "error_description": "The subject token cannot be exchanged by the client."
+}
+</pre><a href="#section-10.1-4" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="relationship-to-mayact">
+<section id="section-11">
+      <h2 id="name-relationship-to-may_act">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-relationship-to-may_act" class="section-name selfRef">Relationship to <code>may_act</code></a>
+      </h2>
+<p id="section-11-1">The <code>may_act</code> claim defined by <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> identifies an actor that is authorized to act with respect to the subject token. It is appropriate when the issuer of the subject token knows the authorized actor at token issuance time.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-11-2">This specification does not replace <code>may_act</code>. An authorization server <span class="bcp14">MAY</span> require both:<a href="#section-11-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-3.1">
+          <p id="section-11-3.1.1">that the token exchange client satisfy the audience-client relationship defined by this specification; and<a href="#section-11-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-3.2">
+          <p id="section-11-3.2.1">that the subject token contain an appropriate <code>may_act</code> claim.<a href="#section-11-3.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-11-4">An authorization server <span class="bcp14">MAY</span> also use this specification without a <code>may_act</code> claim when local policy permits audience-anchored token exchange.<a href="#section-11-4" class="pilcrow">¶</a></p>
+<p id="section-11-5">When the audience-client relationship is established using a JWT validated with the protected resource's <code>jwks_uri</code>, that validation does not itself create or replace a <code>may_act</code> claim. It only establishes that the token exchange client is associated with the protected resource identified by the subject token audience. An authorization server can still require an appropriate <code>may_act</code> claim when its policy requires explicit actor authorization in the subject token.<a href="#section-11-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-12">
+      <h2 id="name-security-considerations">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="protected-resource-metadata-does-not-establish-audience-validity">
+<section id="section-12.1">
+        <h3 id="name-protected-resource-metadata-">
+<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-protected-resource-metadata-" class="section-name selfRef">Protected Resource Metadata Does Not Establish Audience Validity</a>
+        </h3>
+<p id="section-12.1-1">An authorization server <span class="bcp14">MUST NOT</span> treat protected-resource metadata, including <code>jwks_uri</code> or <code>token_exchange_clients</code>, as establishing that an audience value is valid. The authorization server <span class="bcp14">MUST</span> first determine, according to its own policy, that the subject token audience identifies a protected resource for which the authorization server is willing to process token exchange. Only then can the authorization server use protected-resource metadata associated with that audience to establish the relationship between the protected resource and the token exchange client.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+<p id="section-12.1-2">If an attacker can cause an authorization server to issue a subject token with an attacker-controlled audience, the attacker might also control the protected-resource metadata for that audience. In such a case, the metadata can legitimately identify an attacker-controlled client as the client representing that audience. This specification relies on the authorization server's existing audience and resource policy to prevent such an audience from being used to obtain tokens for unrelated resources.<a href="#section-12.1-2" class="pilcrow">¶</a></p>
+<p id="section-12.1-3">The mechanisms defined by this specification only establish that a token exchange client is associated with the subject token audience. They do not authorize issuance of a token for any particular requested resource, scope, subject, or actor chain.<a href="#section-12.1-3" class="pilcrow">¶</a></p>
+<p id="section-12.1-4">Authorization servers <span class="bcp14">MUST</span> apply independent policy to the requested token parameters before issuing an exchanged token.<a href="#section-12.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="metadata-substitution">
+<section id="section-12.2">
+        <h3 id="name-metadata-substitution">
+<a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-metadata-substitution" class="section-name selfRef">Metadata Substitution</a>
+        </h3>
+<p id="section-12.2-1">An authorization server <span class="bcp14">MUST</span> verify that the "resource" value in the protected-resource metadata corresponds to the selected protected resource identifier. Metadata whose "resource" value does not correspond to the selected protected resource identifier <span class="bcp14">MUST NOT</span> be used.<a href="#section-12.2-1" class="pilcrow">¶</a></p>
+<p id="section-12.2-2">If an attacker can substitute protected-resource metadata, the attacker could cause the authorization server to use an attacker-controlled <code>jwks_uri</code> or attacker-controlled <code>token_exchange_clients</code> value. Therefore, the authorization server <span class="bcp14">MUST</span> verify that the obtained metadata is the metadata for the selected protected resource identifier and <span class="bcp14">MUST</span> follow the discovery and validation rules of <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>.<a href="#section-12.2-2" class="pilcrow">¶</a></p>
+<p id="section-12.2-3">Authorization servers <span class="bcp14">SHOULD</span> use HTTPS, normal certificate validation, and the discovery and verification rules of <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> when obtaining protected-resource metadata.<a href="#section-12.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="server-side-request-forgery">
+<section id="section-12.3">
+        <h3 id="name-server-side-request-forgery">
+<a href="#section-12.3" class="section-number selfRef">12.3. </a><a href="#name-server-side-request-forgery" class="section-name selfRef">Server-Side Request Forgery</a>
+        </h3>
+<p id="section-12.3-1">Dereferencing protected-resource metadata can create a server-side request forgery risk. An authorization server <span class="bcp14">MUST NOT</span> dereference arbitrary audience values supplied by an attacker, a client, or an untrusted subject token issuer.<a href="#section-12.3-1" class="pilcrow">¶</a></p>
+<p id="section-12.3-2">Protected-resource metadata discovery defined by this specification <span class="bcp14">MUST</span> only be performed for HTTPS audience values that the authorization server has already determined to be acceptable according to local policy.<a href="#section-12.3-2" class="pilcrow">¶</a></p>
+<p id="section-12.3-3">Authorization servers <span class="bcp14">SHOULD</span> apply additional fetch protections, including:<a href="#section-12.3-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12.3-4.1">
+            <p id="section-12.3-4.1.1">rejecting private, loopback, link-local, and otherwise prohibited network destinations unless explicitly allowed by local policy;<a href="#section-12.3-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.3-4.2">
+            <p id="section-12.3-4.2.1">limiting redirects;<a href="#section-12.3-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.3-4.3">
+            <p id="section-12.3-4.3.1">enforcing response size limits;<a href="#section-12.3-4.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.3-4.4">
+            <p id="section-12.3-4.4.1">enforcing timeouts;<a href="#section-12.3-4.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.3-4.5">
+            <p id="section-12.3-4.5.1">caching validated metadata; and<a href="#section-12.3-4.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.3-4.6">
+            <p id="section-12.3-4.6.1">avoiding inclusion of sensitive request headers when fetching metadata.<a href="#section-12.3-4.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="multiple-audience-values">
+<section id="section-12.4">
+        <h3 id="name-multiple-audience-values">
+<a href="#section-12.4" class="section-number selfRef">12.4. </a><a href="#name-multiple-audience-values" class="section-name selfRef">Multiple Audience Values</a>
+        </h3>
+<p id="section-12.4-1">If a subject token contains multiple audience values, the authorization server <span class="bcp14">MUST</span> determine a single selected protected resource identifier. If the authorization server cannot determine the protected resource context unambiguously, it <span class="bcp14">MUST</span> reject the request.<a href="#section-12.4-1" class="pilcrow">¶</a></p>
+<p id="section-12.4-2">This prevents a client authorized for one audience from using that relationship to exchange a token under a different audience context.<a href="#section-12.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="confidentiality-of-metadata">
+<section id="section-12.5">
+        <h3 id="name-confidentiality-of-metadata">
+<a href="#section-12.5" class="section-number selfRef">12.5. </a><a href="#name-confidentiality-of-metadata" class="section-name selfRef">Confidentiality of Metadata</a>
+        </h3>
+<p id="section-12.5-1">The "token_exchange_clients" metadata parameter can reveal information about the internal topology, client registrations, or downstream call patterns of a protected resource. A <code>jwks_uri</code> can reveal information about the key material used by a protected resource to establish the audience-client relationship.<a href="#section-12.5-1" class="pilcrow">¶</a></p>
+<p id="section-12.5-2">Protected resources should publish this metadata only when the operational benefits outweigh the disclosure risk.<a href="#section-12.5-2" class="pilcrow">¶</a></p>
+<p id="section-12.5-3">Deployments that consider this information sensitive can use local authorization server policy instead of public metadata discovery, or can restrict metadata publication according to mechanisms outside the scope of this specification.<a href="#section-12.5-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-13">
+      <h2 id="name-iana-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<div id="oauth-protected-resource-metadata-registration">
+<section id="section-13.1">
+        <h3 id="name-oauth-protected-resource-me">
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-oauth-protected-resource-me" class="section-name selfRef">OAuth Protected Resource Metadata Registration</a>
+        </h3>
+<p id="section-13.1-1">IANA is requested to register the following value in the "OAuth Protected Resource Metadata" registry established by <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>.<a href="#section-13.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-13.1-2">
+          <dt id="section-13.1-2.1">Metadata Name:</dt>
+          <dd style="margin-left: 1.5em" id="section-13.1-2.2">
+            <p id="section-13.1-2.2.1">token_exchange_clients<a href="#section-13.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-13.1-2.3">Metadata Description:</dt>
+          <dd style="margin-left: 1.5em" id="section-13.1-2.4">
+            <p id="section-13.1-2.4.1">JSON array identifying OAuth clients that represent the protected resource for the purpose of requesting OAuth 2.0 Token Exchange for subject tokens whose audience identifies the protected resource. This parameter is one mechanism for establishing the relationship between a subject token audience and a token exchange client.<a href="#section-13.1-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-13.1-2.5">Change Controller:</dt>
+          <dd style="margin-left: 1.5em" id="section-13.1-2.6">
+            <p id="section-13.1-2.6.1">IETF<a href="#section-13.1-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-13.1-2.7">Specification Document(s):</dt>
+          <dd style="margin-left: 1.5em" id="section-13.1-2.8">
+            <p id="section-13.1-2.8.1">This document<a href="#section-13.1-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgements">
+<section id="section-14">
+      <h2 id="name-acknowledgements">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-acknowledgements" class="section-name selfRef">Acknowledgements</a>
+      </h2>
+<p id="section-14-1">The authors would like to thank the following individuals who contributed ideas, feedback, and wording that helped shape the final specification: Henrik Kroll.<a href="#section-14-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-15">
+      <h2 id="name-references">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-15.1">
+        <h3 id="name-normative-references">
+<a href="#section-15.1" class="section-number selfRef">15.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
 <dl class="references">
+<dt id="I-D.ietf-oauth-client-id-metadata-document">[I-D.ietf-oauth-client-id-metadata-document]</dt>
+        <dd>
+<span class="refTitle">"OAuth Client ID Metadata Document"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/">https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="RFC6749">[RFC6749]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6749">https://www.rfc-editor.org/rfc/rfc6749</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7519">[RFC7519]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Token (JWT)"</span>, <span class="seriesInfo">RFC 7519</span>, <span class="seriesInfo">DOI 10.17487/RFC7519</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7519">https://www.rfc-editor.org/rfc/rfc7519</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7523">[RFC7523]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Campbell, B.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"JSON Web Token (JWT) Profile for OAuth 2.0 Client Authentication and Authorization Grants"</span>, <span class="seriesInfo">RFC 7523</span>, <span class="seriesInfo">DOI 10.17487/RFC7523</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7523">https://www.rfc-editor.org/rfc/rfc7523</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC8174">[RFC8174]</dt>
-    <dd>
+        <dd>
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8693">[RFC8693]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8693">https://www.rfc-editor.org/rfc/rfc8693</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8707">[RFC8707]</dt>
+        <dd>
+<span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">H. Tschofenig</span>, <span class="refTitle">"Resource Indicators for OAuth 2.0"</span>, <span class="seriesInfo">RFC 8707</span>, <span class="seriesInfo">DOI 10.17487/RFC8707</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8707">https://www.rfc-editor.org/rfc/rfc8707</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9728">[RFC9728]</dt>
+      <dd>
+<span class="refAuthor">Jones, M.B.</span>, <span class="refAuthor">Hunt, P.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth 2.0 Protected Resource Metadata"</span>, <span class="seriesInfo">RFC 9728</span>, <span class="seriesInfo">DOI 10.17487/RFC9728</span>, <time datetime="2025-04" class="refDate">April 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9728">https://www.rfc-editor.org/rfc/rfc9728</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="sec-informative-references">
+<section id="section-15.2">
+        <h3 id="name-informative-references">
+<a href="#section-15.2" class="section-number selfRef">15.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="RFC8414">[RFC8414]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8414">https://www.rfc-editor.org/rfc/rfc8414</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9126">[RFC9126]</dt>
+      <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Sakimura, N.</span>, <span class="refAuthor">Tonge, D.</span>, and <span class="refAuthor">F. Skokan</span>, <span class="refTitle">"OAuth 2.0 Pushed Authorization Requests"</span>, <span class="seriesInfo">RFC 9126</span>, <span class="seriesInfo">DOI 10.17487/RFC9126</span>, <time datetime="2021-09" class="refDate">September 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9126">https://www.rfc-editor.org/rfc/rfc9126</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="examples">
 <section id="appendix-A">
-      <h2 id="name-acknowledgments">
-<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      <h2 id="name-examples">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-examples" class="section-name selfRef">Examples</a>
       </h2>
-<p id="appendix-A-1">TODO acknowledge.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<div id="example-tokenexchangeclients">
+<section id="appendix-A.1">
+        <h3 id="name-example-token_exchange_clie">
+<a href="#appendix-A.1" class="section-number selfRef">A.1. </a><a href="#name-example-token_exchange_clie" class="section-name selfRef">Example: <code>token_exchange_clients</code></a>
+        </h3>
+<p id="appendix-A.1-1">In this example, a client calls a protected resource with an access token whose audience is "https://api.example.com":<a href="#appendix-A.1-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-A.1-2">
+<pre>
+{
+  "iss": "https://issuer.example",
+  "sub": "248289761001",
+  "aud": "https://api.example.com",
+  "scope": "read write",
+  "exp": 1710000000
+}
+</pre><a href="#appendix-A.1-2" class="pilcrow">¶</a>
+</div>
+<p id="appendix-A.1-3">The protected resource needs to call a downstream service protected by "https://as-a.example". The protected resource authenticates to "https://as-a.example" as the OAuth client "rs-client-at-as-a" and makes a token exchange request.<a href="#appendix-A.1-3" class="pilcrow">¶</a></p>
+<p id="appendix-A.1-4">The authorization server obtains protected-resource metadata for "https://api.example.com" and receives:<a href="#appendix-A.1-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-A.1-5">
+<pre>
+{
+  "resource": "https://api.example.com",
+  "authorization_servers": [
+    "https://as-a.example"
+  ],
+  "token_exchange_clients": [
+    {
+      "authorization_server": "https://as-a.example",
+      "client_id": "rs-client-at-as-a"
+    }
+  ]
+}
+</pre><a href="#appendix-A.1-5" class="pilcrow">¶</a>
+</div>
+<p id="appendix-A.1-6">The authorization server verifies that:<a href="#appendix-A.1-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A.1-7.1">
+            <p id="appendix-A.1-7.1.1">the subject token is valid;<a href="#appendix-A.1-7.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="appendix-A.1-7.2">
+            <p id="appendix-A.1-7.2.1">the subject token audience is "https://api.example.com";<a href="#appendix-A.1-7.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="appendix-A.1-7.3">
+            <p id="appendix-A.1-7.3.1">the protected-resource metadata "resource" value corresponds to "https://api.example.com";<a href="#appendix-A.1-7.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="appendix-A.1-7.4">
+            <p id="appendix-A.1-7.4.1">the selected "token_exchange_clients" entry is scoped to "https://as-a.example";<a href="#appendix-A.1-7.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="appendix-A.1-7.5">
+            <p id="appendix-A.1-7.5.1">the token exchange client is "rs-client-at-as-a"; and<a href="#appendix-A.1-7.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="appendix-A.1-7.6">
+            <p id="appendix-A.1-7.6.1">all other token exchange policy permits issuing the requested token.<a href="#appendix-A.1-7.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="appendix-A.1-8">If all checks succeed, the authorization server issues the exchanged token.<a href="#appendix-A.1-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="example-jwt-validation-using-jwksuri">
+<section id="appendix-A.2">
+        <h3 id="name-example-jwt-validation-usin">
+<a href="#appendix-A.2" class="section-number selfRef">A.2. </a><a href="#name-example-jwt-validation-usin" class="section-name selfRef">Example: JWT Validation Using <code>jwks_uri</code></a>
+        </h3>
+<p id="appendix-A.2-1">In this example, a protected resource publishes a <code>jwks_uri</code> but omits <code>token_exchange_clients</code>:<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-A.2-2">
+<pre>
+{
+  "resource": "https://api.example.com",
+  "authorization_servers": [
+    "https://as-a.example"
+  ],
+  "jwks_uri": "https://api.example.com/jwks.json"
+}
+</pre><a href="#appendix-A.2-2" class="pilcrow">¶</a>
+</div>
+<p id="appendix-A.2-3">A client receives a subject token whose audience is "https://api.example.com". The client then requests token exchange at "https://as-a.example" and presents a JWT as a client assertion or as an <code>actor_token</code>.<a href="#appendix-A.2-3" class="pilcrow">¶</a></p>
+<p id="appendix-A.2-4">The authorization server obtains the protected-resource metadata for "https://api.example.com", verifies that the metadata <code>resource</code> value corresponds to the subject token audience, retrieves the JWK Set from the <code>jwks_uri</code>, and validates the JWT.<a href="#appendix-A.2-4" class="pilcrow">¶</a></p>
+<p id="appendix-A.2-5">If the JWT is valid and the authorization server policy accepts the JWT as identifying or binding the token exchange client to "https://api.example.com", the authorization server treats the audience-client relationship as established.<a href="#appendix-A.2-5" class="pilcrow">¶</a></p>
+<p id="appendix-A.2-6">The authorization server then applies all remaining token exchange policy before issuing the exchanged token.<a href="#appendix-A.2-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="example-jwksuri-and-tokenexchangeclients">
+<section id="appendix-A.3">
+        <h3 id="name-example-jwks_uri-and-token_">
+<a href="#appendix-A.3" class="section-number selfRef">A.3. </a><a href="#name-example-jwks_uri-and-token_" class="section-name selfRef">Example: <code>jwks_uri</code> and <code>token_exchange_clients</code></a>
+        </h3>
+<p id="appendix-A.3-1">In this example, a protected resource publishes both <code>jwks_uri</code> and <code>token_exchange_clients</code>:<a href="#appendix-A.3-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-A.3-2">
+<pre>
+{
+  "resource": "https://api.example.com",
+  "authorization_servers": [
+    "https://as-a.example"
+  ],
+  "jwks_uri": "https://api.example.com/jwks.json",
+  "token_exchange_clients": [
+    {
+      "authorization_server": "https://as-a.example",
+      "client_id": "rs-client-at-as-a"
+    }
+  ]
+}
+</pre><a href="#appendix-A.3-2" class="pilcrow">¶</a>
+</div>
+<p id="appendix-A.3-3">The client presents a JWT as a client assertion or as an <code>actor_token</code>. The authorization server validates the JWT using the JWK Set obtained from "https://api.example.com/jwks.json".<a href="#appendix-A.3-3" class="pilcrow">¶</a></p>
+<p id="appendix-A.3-4">The authorization server also verifies that the token exchange client identified by the JWT is consistent with the applicable <code>token_exchange_clients</code> entry. If the JWT identifies a different client and local policy does not explicitly allow one mechanism to take precedence, the authorization server rejects the request.<a href="#appendix-A.3-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="document-history">
+<section id="appendix-B">
+      <h2 id="name-document-history">
+<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-B-1">-00<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-B-2.1">
+          <p id="appendix-B-2.1.1">Initial version.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-B">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>
 <address class="vcard">
-        <div dir="auto" class="left"><span class="fn nameRole">Your Name Here</span></div>
-<div dir="auto" class="left"><span class="org">Your Organization Here</span></div>
+        <div dir="auto" class="left"><span class="fn nameRole">Yaron Zehavi</span></div>
+<div dir="auto" class="left"><span class="org">Raiffeisen Bank International</span></div>
 <div class="email">
 <span>Email:</span>
-<a href="mailto:your.email@example.com" class="email">your.email@example.com</a>
+<a href="mailto:yaron.zehavi@rbinternational.com" class="email">yaron.zehavi@rbinternational.com</a>
 </div>
 </address>
 </section>
