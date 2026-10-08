@@ -53,7 +53,7 @@ In deployments where resource servers are invoked using access tokens with a res
 
 Authorization servers that support OAuth 2.0 Token Exchange {{RFC8693}} need to ensure that only authorized clients can exchange a subject token, to prevent misuse by unauthorized parties.
 
-This document defines a model in which authorization to perform token exchange is anchored in the audience claim of the subject token. An authorization server determines whether the token exchange client is associated with the audience-restricted protected resource identified by the subject token, then applies additional policy.
+This document defines a model in which authorization to perform token exchange is anchored in the audience claim of the subject token. An authorization server determines whether the token exchange client is associated with the audience-restricted protected resource identified by the subject token, then applies the remaining token exchange authorization policy.
 
 This relationship can be established by authorization server local policy, by validating a JWT presented by the token exchange client using the protected resource's `jwks_uri`, or by using a new OAuth 2.0 Protected Resource Metadata parameter that identifies token exchange clients for the protected resource.
 
@@ -61,9 +61,9 @@ This relationship can be established by authorization server local policy, by va
 
 # Introduction
 
-OAuth 2.0 access tokens are commonly issued for a specific protected resource, identified by the token’s `aud` claim. Often that resource needs to call downstream services. Because an access token audience-restricted to the protected resource is not suitable for a downstream service, the resource server must obtain a new token with the appropriate audience. OAuth 2.0 Token Exchange {{RFC8693}} provides this mechanism.
+OAuth 2.0 access tokens are commonly issued for a specific protected resource, identified by the token’s `aud` claim. In many deployments, that resource needs to call downstream services. Because an access token audience-restricted to the protected resource is not suitable for a downstream service, the resource server must obtain a new token with the appropriate audience. OAuth 2.0 Token Exchange {{RFC8693}} provides this mechanism.
 
-When processing a token exchange request, the authorization server must determine whether the requesting client is permitted to exchange the subject token. Otherwise unauthorized parties in possession of a subject token could attempt to exchange it for a new token and potentially bypass the original audience restriction. Sender-constraining the subject token to the original client does not remove this risk, because such proof demonstrates possession by the client to which the subject token was issued and does not establish that the protected resource receiving the token is permitted to exchange it.
+When processing a token exchange request, the authorization server must determine whether the requesting client is permitted to exchange the subject token. Otherwise, unauthorized parties in possession of a subject token could attempt to exchange it for a new token and potentially bypass the original audience restriction. Sender-constraining the subject token to the original client does not remove this risk, because such proof demonstrates possession by the client to which the subject token was issued and does not establish that the protected resource receiving the token is permitted to exchange it.
 
 The Token Exchange `may_act` claim can explicitly identify an authorized actor. However, the original token issuer cannot know in advance which authorization server will process a later exchange request, or which client identifier that server uses for the protected resource. This makes `may_act` difficult to use when a protected resource calls multiple downstream services protected by different authorization servers.
 
@@ -158,7 +158,7 @@ The mechanisms defined by this specification only establish that the token excha
 
 # Subject Token Audience Processing {#subject-token-audience-processing}
 
-Considering the `aud` claim value may be an array, the authorization server MUST determine the protected resource audience of the subject token before applying this specification.
+Since the `aud` claim value may be an array, the authorization server MUST determine the protected resource audience of the subject token before applying this specification.
 
 If the subject token contains an "aud" claim whose value is a string, the authorization server treats that value as the candidate protected resource identifier.
 
@@ -351,7 +351,7 @@ When the audience-client relationship is established using `token_exchange_clien
 
 When the selected entry contains an `authorization_server` attribute, the comparison is made against the authorization-server local client identifier of the token exchange client.
 
-When the selected entry omits the `authorization_server` attribute, the `client_id` value is a globally scoped client identifier. The authorization server MUST verify that the token exchange client matches a globally scoped client identifier.
+When the selected entry omits the `authorization_server` attribute, the `client_id` value is a globally scoped client identifier. The authorization server MUST verify that the token exchange client is bound to the globally scoped client identifier.
 
 If both JWT validation and `token_exchange_clients` are used, the authorization server MUST verify that the token exchange client identified by the JWT is consistent with the applicable `token_exchange_clients` entry. If the values are inconsistent, the authorization server SHOULD reject the request unless local policy explicitly allows one mechanism to take precedence.
 
@@ -362,7 +362,7 @@ If the authorization server cannot establish that the token exchange client matc
 At token exchange time, the authorization server performs the following checks:
 
 1. Validate the token exchange request according to {{RFC8693}} and local policy.
-2. Authenticate the client making the token exchange request, if client authentication is required by authorization server policy.
+2. Authenticate or otherwise identify the client making the token exchange request according to OAuth 2.0 and authorization server policy.
 3. Validate the subject token according to token format, issuer, audience, expiration, and local policy.
 4. Determine the selected protected resource identifier from the subject token audience, as described in {{subject-token-audience-processing}}.
 5. Verify that the selected protected resource identifier is acceptable to the authorization server according to local policy.
