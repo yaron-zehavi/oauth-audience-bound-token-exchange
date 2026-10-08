@@ -26,7 +26,8 @@ Abstract
    exchange is anchored in the audience claim of the subject token.  An
    authorization server determines whether the token exchange client is
    associated with the audience-restricted protected resource identified
-   by the subject token, then applies additional policy.
+   by the subject token, then applies the remaining token exchange
+   authorization policy.
 
    This relationship can be established by authorization server local
    policy, by validating a JWT presented by the token exchange client
@@ -128,17 +129,17 @@ Table of Contents
 1.  Introduction
 
    OAuth 2.0 access tokens are commonly issued for a specific protected
-   resource, identified by the token’s aud claim.  Often that resource
-   needs to call downstream services.  Because an access token audience-
-   restricted to the protected resource is not suitable for a downstream
-   service, the resource server must obtain a new token with the
-   appropriate audience.  OAuth 2.0 Token Exchange [RFC8693] provides
-   this mechanism.
+   resource, identified by the token’s aud claim.  In many deployments,
+   that resource needs to call downstream services.  Because an access
+   token audience-restricted to the protected resource is not suitable
+   for a downstream service, the resource server must obtain a new token
+   with the appropriate audience.  OAuth 2.0 Token Exchange [RFC8693]
+   provides this mechanism.
 
    When processing a token exchange request, the authorization server
    must determine whether the requesting client is permitted to exchange
-   the subject token.  Otherwise unauthorized parties in possession of a
-   subject token could attempt to exchange it for a new token and
+   the subject token.  Otherwise, unauthorized parties in possession of
+   a subject token could attempt to exchange it for a new token and
    potentially bypass the original audience restriction.  Sender-
    constraining the subject token to the original client does not remove
    this risk, because such proof demonstrates possession by the client
@@ -320,9 +321,9 @@ Table of Contents
 
 6.  Subject Token Audience Processing
 
-   Considering the aud claim value may be an array, the authorization
-   server MUST determine the protected resource audience of the subject
-   token before applying this specification.
+   Since the aud claim value may be an array, the authorization server
+   MUST determine the protected resource audience of the subject token
+   before applying this specification.
 
    If the subject token contains an "aud" claim whose value is a string,
    the authorization server treats that value as the candidate protected
@@ -665,8 +666,8 @@ Table of Contents
 
    When the selected entry omits the authorization_server attribute, the
    client_id value is a globally scoped client identifier.  The
-   authorization server MUST verify that the token exchange client
-   matches a globally scoped client identifier.
+   authorization server MUST verify that the token exchange client is
+   bound to the globally scoped client identifier.
 
    If both JWT validation and token_exchange_clients are used, the
    authorization server MUST verify that the token exchange client
@@ -688,8 +689,8 @@ Table of Contents
    1.   Validate the token exchange request according to [RFC8693] and
         local policy.
 
-   2.   Authenticate the client making the token exchange request, if
-        client authentication is required by authorization server
+   2.   Authenticate or otherwise identify the client making the token
+        exchange request according to OAuth 2.0 and authorization server
         policy.
 
    3.   Validate the subject token according to token format, issuer,
