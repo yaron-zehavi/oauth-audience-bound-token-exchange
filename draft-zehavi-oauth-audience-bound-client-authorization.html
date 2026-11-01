@@ -1,0 +1,2281 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>OAuth 2.0 Audience-Bound Client Authorization</title>
+<meta content="Yaron Zehavi" name="author">
+<meta content="
+       OAuth 2.0 access tokens are commonly audience-restricted to a specific protected resource. Several OAuth operations are performed by a client on behalf of that protected resource and act on such a token, including OAuth 2.0 Token Exchange  , in which the protected resource exchanges a received token to call downstream services, and OAuth 2.0 Token Introspection  , in which the protected resource asks the authorization server about a received token. 
+       In each case, the authorization server needs to ensure that only a client legitimately representing the token's audience can perform the operation, to prevent misuse of the token by unauthorized parties. 
+       This document defines a model in which authorization to perform such operations is anchored in the audience of the token. An authorization server determines whether the requesting client is associated with the protected resource identified by the token audience, then applies the remaining authorization policy for the requested operation. 
+       This relationship can be established by authorization server local policy, by validating a  private_key_jwt  client authentication assertion using the protected resource's  jwks_uri , or by using a new OAuth 2.0 Protected Resource Metadata parameter that identifies the OAuth clients representing the protected resource. 
+       This document specifies how the model applies to token exchange and to token introspection, and allows other specifications to apply it to additional operations. 
+    " name="description">
+<meta content="xml2rfc 3.34.1" name="generator">
+<meta content="OAuth" name="keyword">
+<meta content="token exchange" name="keyword">
+<meta content="token introspection" name="keyword">
+<meta content="protected resource metadata" name="keyword">
+<meta content="audience" name="keyword">
+<meta content="draft-zehavi-oauth-audience-bound-client-authorization-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.1
+    Python 3.14.8
+    ConfigArgParse 1.8.0
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.13.4
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.9.2
+-->
+<link href="draft-zehavi-oauth-audience-bound-client-authorization.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Audience-Bound Client Authorization</td>
+<td class="right">November 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">Zehavi</td>
+<td class="center">Expires 5 May 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Web Authorization Protocol</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-zehavi-oauth-audience-bound-client-authorization-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-11-01" class="published">1 November 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-05-05">5 May 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">Y. Zehavi</div>
+<div class="org">Raiffeisen Bank International</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">OAuth 2.0 Audience-Bound Client Authorization</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">OAuth 2.0 access tokens are commonly audience-restricted to a specific protected resource. Several OAuth operations are performed by a client on behalf of that protected resource and act on such a token, including OAuth 2.0 Token Exchange <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>, in which the protected resource exchanges a received token to call downstream services, and OAuth 2.0 Token Introspection <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>, in which the protected resource asks the authorization server about a received token.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-2">In each case, the authorization server needs to ensure that only a client legitimately representing the token's audience can perform the operation, to prevent misuse of the token by unauthorized parties.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
+<p id="section-abstract-3">This document defines a model in which authorization to perform such operations is anchored in the audience of the token. An authorization server determines whether the requesting client is associated with the protected resource identified by the token audience, then applies the remaining authorization policy for the requested operation.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
+<p id="section-abstract-4">This relationship can be established by authorization server local policy, by validating a <code>private_key_jwt</code> client authentication assertion using the protected resource's <code>jwks_uri</code>, or by using a new OAuth 2.0 Protected Resource Metadata parameter that identifies the OAuth clients representing the protected resource.<a href="#section-abstract-4" class="pilcrow">¶</a></p>
+<p id="section-abstract-5">This document specifies how the model applies to token exchange and to token introspection, and allows other specifications to apply it to additional operations.<a href="#section-abstract-5" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://yaron-zehavi.github.io/oauth-audience-bound-token-exchange/draft-zehavi-oauth-audience-bound-client-authorization.html">https://yaron-zehavi.github.io/oauth-audience-bound-token-exchange/draft-zehavi-oauth-audience-bound-client-authorization.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-zehavi-oauth-audience-bound-client-authorization/">https://datatracker.ietf.org/doc/draft-zehavi-oauth-audience-bound-client-authorization/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">
+        Discussion of this document takes place on the
+        Web Authorization Protocol Working Group mailing list (<span><a href="mailto:oauth@ietf.org">mailto:oauth@ietf.org</a></span>),
+        which is archived at <span><a href="https://mailarchive.ietf.org/arch/browse/oauth/">https://mailarchive.ietf.org/arch/browse/oauth/</a></span>.
+        Subscribe at <span><a href="https://www.ietf.org/mailman/listinfo/oauth/">https://www.ietf.org/mailman/listinfo/oauth/</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+<p id="section-note.1-4">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/yaron-zehavi/oauth-audience-bound-token-exchange">https://github.com/yaron-zehavi/oauth-audience-bound-token-exchange</a></span>.<a href="#section-note.1-4" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 5 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-requirements-notation-and-c" class="internal xref">Requirements Notation and Conventions</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-scope" class="internal xref">Scope</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-terminology" class="internal xref">Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-overview" class="internal xref">Overview</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-token-audience-processing" class="internal xref">Token Audience Processing</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-https-and-non-https-audienc" class="internal xref">HTTPS and Non-HTTPS Audience Values</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-establishing-the-audience-c" class="internal xref">Establishing the Audience-Client Relationship</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-local-policy" class="internal xref">Local Policy</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-metadata-discovery" class="internal xref">Metadata Discovery</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-metadata-verification" class="internal xref">Metadata Verification</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-client-authentication-using" class="internal xref">Client Authentication Using <code>private_key_jwt</code> and <code>jwks_uri</code></a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-protected-resource-metadata" class="internal xref">Protected Resource Metadata</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-resource_clients-metadata-p" class="internal xref"><code>resource_clients</code> Metadata Parameter</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-metadata-example" class="internal xref">Metadata Example</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
+                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-selecting-a-resource-client" class="internal xref">Selecting a Resource Client Entry</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.4">
+                <p id="section-toc.1-1.9.2.4.1"><a href="#section-9.4" class="auto internal xref">9.4</a>.  <a href="#name-client-comparison" class="internal xref">Client Comparison</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-application-to-token-exchan" class="internal xref">Application to Token Exchange</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-token-exchange-processing" class="internal xref">Token Exchange Processing</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-token-exchange-error-handli" class="internal xref">Token Exchange Error Handling</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
+                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-relationship-to-may_act" class="internal xref">Relationship to <code>may_act</code></a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-application-to-token-intros" class="internal xref">Application to Token Introspection</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-token-introspection-process" class="internal xref">Token Introspection Processing</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-token-introspection-error-h" class="internal xref">Token Introspection Error Handling</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-other-applications" class="internal xref">Other Applications</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-protected-resource-metadata-" class="internal xref">Protected Resource Metadata Does Not Establish Audience Validity</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
+                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-different-operations-have-d" class="internal xref">Different Operations Have Different Risk</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.3">
+                <p id="section-toc.1-1.13.2.3.1"><a href="#section-13.3" class="auto internal xref">13.3</a>.  <a href="#name-metadata-substitution" class="internal xref">Metadata Substitution</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.4">
+                <p id="section-toc.1-1.13.2.4.1"><a href="#section-13.4" class="auto internal xref">13.4</a>.  <a href="#name-protected-resource-key-comp" class="internal xref">Protected Resource Key Compromise</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.5">
+                <p id="section-toc.1-1.13.2.5.1"><a href="#section-13.5" class="auto internal xref">13.5</a>.  <a href="#name-server-side-request-forgery" class="internal xref">Server-Side Request Forgery</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.6">
+                <p id="section-toc.1-1.13.2.6.1"><a href="#section-13.6" class="auto internal xref">13.6</a>.  <a href="#name-multiple-audience-values" class="internal xref">Multiple Audience Values</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.7">
+                <p id="section-toc.1-1.13.2.7.1"><a href="#section-13.7" class="auto internal xref">13.7</a>.  <a href="#name-confidentiality-of-metadata" class="internal xref">Confidentiality of Metadata</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
+                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-oauth-protected-resource-me" class="internal xref">OAuth Protected Resource Metadata Registration</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-acknowledgements" class="internal xref">Acknowledgements</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref">16</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.1">
+                <p id="section-toc.1-1.16.2.1.1"><a href="#section-16.1" class="auto internal xref">16.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.2">
+                <p id="section-toc.1-1.16.2.2.1"><a href="#section-16.2" class="auto internal xref">16.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-examples" class="internal xref">Examples</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.1">
+                <p id="section-toc.1-1.17.2.1.1"><a href="#appendix-A.1" class="auto internal xref">A.1</a>.  <a href="#name-example-token-exchange-usin" class="internal xref">Example: Token Exchange Using <code>resource_clients</code></a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.2">
+                <p id="section-toc.1-1.17.2.2.1"><a href="#appendix-A.2" class="auto internal xref">A.2</a>.  <a href="#name-example-token-introspection" class="internal xref">Example: Token Introspection Using <code>private_key_jwt</code> and <code>jwks_uri</code></a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.3">
+                <p id="section-toc.1-1.17.2.3.1"><a href="#appendix-A.3" class="auto internal xref">A.3</a>.  <a href="#name-example-token-exchange-using" class="internal xref">Example: Token Exchange Using <code>private_key_jwt</code>, <code>jwks_uri</code>, and <code>resource_clients</code></a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
+            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19">
+            <p id="section-toc.1-1.19.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">OAuth 2.0 access tokens are commonly issued for a specific protected resource, identified by the token's audience, such as the <code>aud</code> claim of a JWT access token. Several OAuth operations are performed by a client representing that protected resource and act on such a token. For example:<a href="#section-1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1-2.1">
+          <p id="section-1-2.1.1">A protected resource that needs to call downstream services uses OAuth 2.0 Token Exchange <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> to exchange the received token for a new token with an audience appropriate for the downstream service.<a href="#section-1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-2.2">
+          <p id="section-1-2.2.1">A protected resource that receives an opaque token, or that needs current token state, uses OAuth 2.0 Token Introspection <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> to ask the authorization server about the token.<a href="#section-1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-1-3">In each case, the authorization server must determine whether the requesting client is permitted to perform the operation on the presented token. Otherwise, unauthorized parties in possession of a token could exchange it for a new token, potentially bypassing the original audience restriction, or learn information about a token that was not intended for them. <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> already requires that an authorization server determine whether a token can be used at the protected resource making the introspection call, but does not define how the relationship between that protected resource and the calling client is established.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">Sender-constraining the token to the original client does not address this need, because such proof demonstrates possession by the client to which the token was issued and does not establish that the protected resource receiving the token is permitted to act on it.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">The Token Exchange <code>may_act</code> claim can explicitly identify an authorized actor. However, the original token issuer cannot know in advance which authorization server will process a later exchange request, or which client identifier that server uses for the protected resource. This makes <code>may_act</code> difficult to use when a protected resource calls multiple downstream services protected by different authorization servers.<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-6">This document specifies an audience-anchored model for determining whether a client may perform an operation on a token. In this model, the authorization server uses the token's audience to identify the protected resource, establishes whether the requesting client is associated with that protected resource, then applies the remaining authorization policy for the requested operation.<a href="#section-1-6" class="pilcrow">¶</a></p>
+<p id="section-1-7">This relationship can be established in three ways.<a href="#section-1-7" class="pilcrow">¶</a></p>
+<p id="section-1-8">First, the authorization server can use local policy. For example, the authorization server can be configured to associate a particular client identifier with a particular protected resource.<a href="#section-1-8" class="pilcrow">¶</a></p>
+<p id="section-1-9">Second, when the protected resource metadata contains a <code>jwks_uri</code>, the authorization server can use the keys referenced by that <code>jwks_uri</code> to validate the JWT assertion presented by the client when authenticating using the <code>private_key_jwt</code> client authentication method. Successful validation establishes that the client holds a key published by the protected resource identified by the token audience.<a href="#section-1-9" class="pilcrow">¶</a></p>
+<p id="section-1-10">Third, the authorization server can use OAuth 2.0 Protected Resource Metadata <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>. This document defines a new protected-resource metadata parameter that allows a protected resource to publish the OAuth client identifiers that represent it at one or more authorization servers.<a href="#section-1-10" class="pilcrow">¶</a></p>
+<p id="section-1-11">The authorization server can use any of these mechanisms, together with its own trust and policy checks, to verify that the client is associated with the protected resource identified by the token audience.<a href="#section-1-11" class="pilcrow">¶</a></p>
+<p id="section-1-12">This specification does not define a new access token claim, actor chain, actor proof, or actor receipt, nor does it change the semantics of the <code>act</code> or <code>may_act</code> claims used by OAuth 2.0 Token Exchange. Instead, it defines mechanisms and authorization-server processing rules for establishing the relationship between a token audience and a requesting client, and applies them to token exchange and token introspection.<a href="#section-1-12" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="requirements-notation-and-conventions">
+<section id="section-2">
+      <h2 id="name-requirements-notation-and-c">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-requirements-notation-and-c" class="section-name selfRef">Requirements Notation and Conventions</a>
+      </h2>
+<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="scope">
+<section id="section-3">
+      <h2 id="name-scope">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-scope" class="section-name selfRef">Scope</a>
+      </h2>
+<p id="section-3-1">This specification defines how an authorization server establishes a relationship between the audience of a token and the OAuth client requesting an operation on that token, in order to evaluate whether that client is permitted to perform the operation.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">This specification defines:<a href="#section-3-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-3.1">
+          <p id="section-3-3.1.1">how audience values of the token are used to identify the protected resource context;<a href="#section-3-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.2">
+          <p id="section-3-3.2.1">how local policy can establish the relationship between a protected resource audience and a requesting client;<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.3">
+          <p id="section-3-3.3.1">how validation of a <code>private_key_jwt</code> client assertion using a protected resource's <code>jwks_uri</code> can establish that relationship;<a href="#section-3-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.4">
+          <p id="section-3-3.4.1">a protected-resource metadata parameter named <code>resource_clients</code>;<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.5">
+          <p id="section-3-3.5.1">how an authorization server selects entries from that metadata, and how the selected entry is compared to the requesting client;<a href="#section-3-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.6">
+          <p id="section-3-3.6.1">how this model applies to OAuth 2.0 Token Exchange <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>; and<a href="#section-3-3.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.7">
+          <p id="section-3-3.7.1">how this model applies to OAuth 2.0 Token Introspection <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>.<a href="#section-3-3.7.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-3-4">Other specifications <span class="bcp14">MAY</span> apply the model defined by this document to additional operations, as described in <a href="#other-applications" class="auto internal xref">Section 12</a>.<a href="#section-3-4" class="pilcrow">¶</a></p>
+<p id="section-3-5">This specification does not define:<a href="#section-3-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-6.1">
+          <p id="section-3-6.1.1">a new access token claim;<a href="#section-3-6.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-6.2">
+          <p id="section-3-6.2.1">a replacement for the <code>act</code> or <code>may_act</code> claims defined by <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>;<a href="#section-3-6.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-6.3">
+          <p id="section-3-6.3.1">actor-chain representation;<a href="#section-3-6.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-6.4">
+          <p id="section-3-6.4.1">token exchange grant semantics beyond those already defined by <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>; or<a href="#section-3-6.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-6.5">
+          <p id="section-3-6.5.1">token introspection semantics beyond those already defined by <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>.<a href="#section-3-6.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="terminology">
+<section id="section-4">
+      <h2 id="name-terminology">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-terminology" class="section-name selfRef">Terminology</a>
+      </h2>
+<p id="section-4-1">This document uses the terms "client", "authorization server", "protected resource", "resource server", "access token", and "scope" as defined by OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">This document uses the term "token exchange" as defined by <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>, the term "token introspection" as defined by <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>, and the term "protected resource metadata" as defined by <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>.<a href="#section-4-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4-3">
+        <dt id="section-4-3.1">Audience-Bound Token:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.2">
+          <p id="section-4-3.2.1">The token on which the requesting client asks the authorization server to perform an operation. For token exchange, this is the token presented as the "subject_token" parameter defined by <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>. For token introspection, this is the token presented as the "token" parameter defined by <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>.<a href="#section-4-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.3">Token Audience:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.4">
+          <p id="section-4-3.4.1">The audience value, or values, of the audience-bound token. For JWT tokens, this is the "aud" claim defined by <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>. For other tokens, this is the audience recorded by, or otherwise known to, the authorization server.<a href="#section-4-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.5">Selected Protected Resource Identifier:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.6">
+          <p id="section-4-3.6.1">The single audience value selected by the authorization server as the protected resource context for the request.<a href="#section-4-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.7">Requesting Client:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.8">
+          <p id="section-4-3.8.1">The OAuth client that requests an operation on the audience-bound token, such as token exchange or token introspection.<a href="#section-4-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.9">Audience-Client Relationship:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.10">
+          <p id="section-4-3.10.1">A relationship, accepted by the authorization server, between the selected protected resource identifier and the requesting client.<a href="#section-4-3.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.11">Authorization-Server Local Client Identifier:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.12">
+          <p id="section-4-3.12.1">A client identifier whose value is scoped to a specific authorization server.<a href="#section-4-3.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.13">Globally Scoped Client Identifier:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.14">
+          <p id="section-4-3.14.1">A client identifier, such as a Client ID Metadata Document URL <span>[<a href="#I-D.ietf-oauth-client-id-metadata-document" class="cite xref">I-D.ietf-oauth-client-id-metadata-document</a>]</span>, whose value is not scoped to a specific authorization server.<a href="#section-4-3.14.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="overview">
+<section id="section-5">
+      <h2 id="name-overview">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-overview" class="section-name selfRef">Overview</a>
+      </h2>
+<p id="section-5-1">An authorization server processing a request to perform an operation on an audience-bound token needs to determine whether the requesting client is associated with the protected resource identified by the token audience. This document calls this the audience-client relationship.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">The audience-client relationship can be established by one or more of the following mechanisms:<a href="#section-5-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5-3">
+<li id="section-5-3.1">
+          <p id="section-5-3.1.1">local policy;<a href="#section-5-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-3.2">
+          <p id="section-5-3.2.1">validation of a <code>private_key_jwt</code> client assertion presented by the requesting client using keys obtained from the protected resource's <code>jwks_uri</code>; or<a href="#section-5-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-3.3">
+          <p id="section-5-3.3.1">a <code>resource_clients</code> protected-resource metadata parameter.<a href="#section-5-3.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-5-4">An authorization server applying this specification performs the following high-level steps:<a href="#section-5-4" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5-5">
+<li id="section-5-5.1">
+          <p id="section-5-5.1.1">authenticates the requesting client and validates the audience-bound token according to the rules of the requested operation;<a href="#section-5-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-5.2">
+          <p id="section-5-5.2.1">determines the selected protected resource identifier from the token audience;<a href="#section-5-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-5.3">
+          <p id="section-5-5.3.1">obtains protected-resource metadata for the selected protected resource identifier, if metadata-based processing is used;<a href="#section-5-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-5.4">
+          <p id="section-5-5.4.1">establishes the audience-client relationship using local policy, <code>private_key_jwt</code> validation, <code>resource_clients</code>, or a combination of these mechanisms; and<a href="#section-5-5.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-5.5">
+          <p id="section-5-5.5.1">applies all remaining policy for the requested operation.<a href="#section-5-5.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-5-6">The mechanisms defined by this specification only establish that the requesting client is associated with the protected resource identified by the token audience. They do not by themselves authorize any particular operation. In particular, they do not authorize a requested token audience, scopes, subject, actor chain, or delegation semantics in token exchange, and they do not determine which token information is disclosed in a token introspection response.<a href="#section-5-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="token-audience-processing">
+<section id="section-6">
+      <h2 id="name-token-audience-processing">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-token-audience-processing" class="section-name selfRef">Token Audience Processing</a>
+      </h2>
+<p id="section-6-1">Since a token can have more than one audience value, the authorization server <span class="bcp14">MUST</span> determine the protected resource audience of the audience-bound token before applying this specification.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">If the token audience is a single string, the authorization server treats that value as the candidate protected resource identifier.<a href="#section-6-2" class="pilcrow">¶</a></p>
+<p id="section-6-3">If the token audience is an array, the authorization server treats each string value in the array as a candidate protected resource identifier.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">If the audience-bound token does not have an audience value, or if the authorization server cannot determine the protected resource identifier, it <span class="bcp14">MUST NOT</span> use the metadata processing defined by this specification.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">The authorization server <span class="bcp14">MUST</span> identify exactly one selected protected resource identifier with which the requesting client has an audience-client relationship. If no candidate protected resource identifier matches, the authorization server <span class="bcp14">MUST</span> reject the request. If multiple candidate protected resource identifiers match and the authorization server cannot determine the applicable protected resource context unambiguously, the authorization server <span class="bcp14">MUST</span> reject the request.<a href="#section-6-5" class="pilcrow">¶</a></p>
+<div id="https-and-non-https-audience-values">
+<section id="section-6.1">
+        <h3 id="name-https-and-non-https-audienc">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-https-and-non-https-audienc" class="section-name selfRef">HTTPS and Non-HTTPS Audience Values</a>
+        </h3>
+<p id="section-6.1-1">This specification does not require all token audience values to be HTTPS URIs. However, protected-resource metadata discovery <span class="bcp14">MUST</span> only be performed for candidate protected resource identifiers that are HTTPS URIs and that are acceptable to the authorization server according to local policy.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<p id="section-6.1-2">The authorization server <span class="bcp14">MUST NOT</span> dereference arbitrary non-HTTPS audience values as protected-resource metadata locations.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+<p id="section-6.1-3">If a token audience value is not an HTTPS URI, the authorization server <span class="bcp14">MAY</span> use local policy to associate that audience value with a protected resource and with a permitted requesting client.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<p id="section-6.1-4">For example, the following audience value can be used with local policy:<a href="#section-6.1-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6.1-5">
+<pre>
+{
+  "aud": "api://orders"
+}
+</pre><a href="#section-6.1-5" class="pilcrow">¶</a>
+</div>
+<p id="section-6.1-6">The authorization server can have local policy equivalent to:<a href="#section-6.1-6" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-6.1-7">
+<pre>
+api://orders -&gt; rs-orders-client
+</pre><a href="#section-6.1-7" class="pilcrow">¶</a>
+</div>
+<p id="section-6.1-8">The authorization server <span class="bcp14">MUST NOT</span> attempt to dereference "api://orders" as protected-resource metadata.<a href="#section-6.1-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="establishing-relationship">
+<section id="section-7">
+      <h2 id="name-establishing-the-audience-c">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-establishing-the-audience-c" class="section-name selfRef">Establishing the Audience-Client Relationship</a>
+      </h2>
+<p id="section-7-1">Before performing an operation to which this specification is applied, the authorization server <span class="bcp14">MUST</span> establish a relationship between the selected protected resource identifier and the requesting client.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">The authorization server <span class="bcp14">MAY</span> establish the audience-client relationship using one or more of the following mechanisms:<a href="#section-7-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-3.1">
+          <p id="section-7-3.1.1">local policy;<a href="#section-7-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-3.2">
+          <p id="section-7-3.2.1">validation of a <code>private_key_jwt</code> client assertion presented by the requesting client using keys obtained from the protected resource's <code>jwks_uri</code>; or<a href="#section-7-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-3.3">
+          <p id="section-7-3.3.1">the <code>resource_clients</code> protected-resource metadata parameter defined by this specification.<a href="#section-7-3.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-7-4">An authorization server <span class="bcp14">MAY</span> require more than one mechanism to succeed. For example, an authorization server can require that the client match an entry in <code>resource_clients</code> and that the client authenticate using a <code>private_key_jwt</code> assertion validated using the protected resource's <code>jwks_uri</code>.<a href="#section-7-4" class="pilcrow">¶</a></p>
+<p id="section-7-5">If none of the mechanisms accepted by authorization server policy establishes the relationship between the selected protected resource identifier and the requesting client, the authorization server <span class="bcp14">MUST</span> reject the request.<a href="#section-7-5" class="pilcrow">¶</a></p>
+<p id="section-7-6">Establishing the audience-client relationship does not by itself authorize the requested operation. The authorization server <span class="bcp14">MUST</span> also apply all other policy applicable to the requested operation. An authorization server <span class="bcp14">MAY</span> permit a client that has an audience-client relationship with a protected resource to perform some operations, such as token introspection, but not others, such as token exchange.<a href="#section-7-6" class="pilcrow">¶</a></p>
+<div id="local-policy">
+<section id="section-7.1">
+        <h3 id="name-local-policy">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-local-policy" class="section-name selfRef">Local Policy</a>
+        </h3>
+<p id="section-7.1-1">An authorization server <span class="bcp14">MAY</span> use local policy to determine the requesting client for a selected protected resource identifier. The authorization server <span class="bcp14">MUST</span> compare the requesting client to the client identifier identified by local policy. If the client does not match, the authorization server <span class="bcp14">MUST</span> reject the request.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.1-2">Local policy can be used for HTTPS and non-HTTPS audience values.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="metadata-discovery">
+<section id="section-8">
+      <h2 id="name-metadata-discovery">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-metadata-discovery" class="section-name selfRef">Metadata Discovery</a>
+      </h2>
+<p id="section-8-1">When the selected protected resource identifier is an HTTPS URI, the authorization server <span class="bcp14">MAY</span> obtain protected-resource metadata for that identifier using OAuth 2.0 Protected Resource Metadata <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2">The authorization server constructs the protected-resource metadata URL from the selected protected resource identifier as specified in <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>. If the identifier has no path or query component, the metadata URL is formed by appending <code>/.well-known/oauth-protected-resource</code> to the origin. For example, the identifier:<a href="#section-8-2" class="pilcrow">¶</a></p>
+<p id="section-8-3"><code>https://resource.example.com</code><a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">corresponds to the metadata URL:<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-5"><code>https://resource.example.com/.well-known/oauth-protected-resource</code><a href="#section-8-5" class="pilcrow">¶</a></p>
+<p id="section-8-6">If the identifier contains a path or query component, the authorization server <span class="bcp14">MUST</span> insert <code>/.well-known/oauth-protected-resource</code> after the host component and before the path or query component. The authorization server <span class="bcp14">MUST NOT</span> remove the path component before constructing the metadata URL. For example, the identifier:<a href="#section-8-6" class="pilcrow">¶</a></p>
+<p id="section-8-7"><code>https://resource.example.com/resource1</code><a href="#section-8-7" class="pilcrow">¶</a></p>
+<p id="section-8-8">corresponds to the metadata URL:<a href="#section-8-8" class="pilcrow">¶</a></p>
+<p id="section-8-9"><code>https://resource.example.com/.well-known/oauth-protected-resource/resource1</code><a href="#section-8-9" class="pilcrow">¶</a></p>
+<p id="section-8-10">The authorization server <span class="bcp14">MUST NOT</span> attempt alternative metadata URLs formed by stripping the path component, appending the well-known suffix after the path component, or otherwise modifying the selected protected resource identifier, unless such behavior is explicitly configured by local policy. Metadata obtained from a URL other than the one constructed for the selected protected resource identifier <span class="bcp14">MUST NOT</span> be used to establish an audience-client relationship for that protected resource.<a href="#section-8-10" class="pilcrow">¶</a></p>
+<div id="metadata-verification">
+<section id="section-8.1">
+        <h3 id="name-metadata-verification">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-metadata-verification" class="section-name selfRef">Metadata Verification</a>
+        </h3>
+<p id="section-8.1-1">The authorization server <span class="bcp14">MUST</span> verify that the "resource" value in the obtained metadata corresponds to the selected protected resource identifier. Metadata whose "resource" value does not correspond to the selected protected resource identifier <span class="bcp14">MUST NOT</span> be used for the authorization decision defined by this specification.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-2">The authorization server <span class="bcp14">MUST NOT</span> use protected-resource metadata as the basis for accepting an otherwise untrusted audience value. The authorization server first determines whether the token audience identifies a protected resource that is acceptable according to local policy. Protected-resource metadata can then be used to establish the relationship between that protected resource audience and the requesting client.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
+<p id="section-8.1-3">Protected-resource metadata can establish this relationship by publishing a <code>jwks_uri</code>, by publishing <code>resource_clients</code>, or by publishing both.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
+<p id="section-8.1-4">When <code>jwks_uri</code> is used, the authorization server <span class="bcp14">MUST</span> verify that the <code>private_key_jwt</code> client assertion presented by the requesting client validates with a key obtained from the protected resource's JWK Set document, as described in <a href="#private-key-jwt" class="auto internal xref">Section 8.2</a>.<a href="#section-8.1-4" class="pilcrow">¶</a></p>
+<p id="section-8.1-5">When <code>resource_clients</code> is used, the authorization server <span class="bcp14">MUST</span> verify that the requesting client matches an applicable entry in the <code>resource_clients</code> metadata parameter.<a href="#section-8.1-5" class="pilcrow">¶</a></p>
+<p id="section-8.1-6">The authorization server <span class="bcp14">SHOULD</span> cache protected-resource metadata according to HTTP caching semantics and local policy. Cached metadata <span class="bcp14">MUST NOT</span> be used beyond any applicable expiration time or beyond limits established by local policy.<a href="#section-8.1-6" class="pilcrow">¶</a></p>
+<p id="section-8.1-7">The authorization server <span class="bcp14">MUST</span> handle metadata retrieval failure as an authorization failure unless local policy provides another permitted method for establishing the audience-client relationship.<a href="#section-8.1-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="private-key-jwt">
+<section id="section-8.2">
+        <h3 id="name-client-authentication-using">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-client-authentication-using" class="section-name selfRef">Client Authentication Using <code>private_key_jwt</code> and <code>jwks_uri</code></a>
+        </h3>
+<p id="section-8.2-1">Protected-resource metadata can contain a <code>jwks_uri</code> parameter that identifies the protected resource's JWK Set document.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<p id="section-8.2-2">When the requesting client authenticates to the authorization server using the <code>private_key_jwt</code> client authentication method <span>[<a href="#OpenID.Core" class="cite xref">OpenID.Core</a>]</span>, that is, using a JWT client assertion as defined in <span><a href="https://rfc-editor.org/rfc/rfc7523#section-2.2" class="relref">Section 2.2</a> of [<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>, the authorization server <span class="bcp14">MAY</span> validate the client assertion using the keys referenced by the <code>jwks_uri</code> in the protected-resource metadata for the selected protected resource identifier.<a href="#section-8.2-2" class="pilcrow">¶</a></p>
+<p id="section-8.2-3">This mechanism applies at any authorization server endpoint at which the requesting client authenticates using <code>private_key_jwt</code>, including the token endpoint used for token exchange and the introspection endpoint.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+<p id="section-8.2-4">If the client assertion validates using a key obtained from that <code>jwks_uri</code>, the authorization server <span class="bcp14">MAY</span> treat this validation as establishing the audience-client relationship, because the requesting client has demonstrated possession of a private key whose public key is published by the protected resource identified by the token audience.<a href="#section-8.2-4" class="pilcrow">¶</a></p>
+<p id="section-8.2-5">When using this mechanism, the authorization server <span class="bcp14">MUST</span> verify the protected-resource metadata as described in <a href="#metadata-verification" class="auto internal xref">Section 8.1</a> before using the <code>jwks_uri</code>.<a href="#section-8.2-5" class="pilcrow">¶</a></p>
+<p id="section-8.2-6">The authorization server <span class="bcp14">MUST</span> validate the client assertion according to <span><a href="https://rfc-editor.org/rfc/rfc7523#section-3" class="relref">Section 3</a> of [<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> and local policy, including validation of the signature, issuer, subject, audience, expiration time, and any other claims required by local policy. As required by <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>, the "iss" and "sub" claims of the client assertion identify the requesting client by its client identifier.<a href="#section-8.2-6" class="pilcrow">¶</a></p>
+<p id="section-8.2-7">A protected resource that relies on <code>private_key_jwt</code> validation through <code>jwks_uri</code> <span class="bcp14">MAY</span> omit the <code>resource_clients</code> metadata parameter. In such a case, the authorization server relies on successful client assertion validation, together with local policy, to establish the audience-client relationship.<a href="#section-8.2-7" class="pilcrow">¶</a></p>
+<p id="section-8.2-8">If the protected-resource metadata includes both <code>jwks_uri</code> and <code>resource_clients</code>, the authorization server <span class="bcp14">SHOULD</span> verify that the client identifier in the client assertion is consistent with an applicable <code>resource_clients</code> entry. If the values are inconsistent, the authorization server <span class="bcp14">MUST</span> reject the request unless local policy explicitly allows the <code>jwks_uri</code>-based mechanism to take precedence.<a href="#section-8.2-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="protected-resource-metadata">
+<section id="section-9">
+      <h2 id="name-protected-resource-metadata">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-protected-resource-metadata" class="section-name selfRef">Protected Resource Metadata</a>
+      </h2>
+<div id="resourceclients-metadata-parameter">
+<section id="section-9.1">
+        <h3 id="name-resource_clients-metadata-p">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-resource_clients-metadata-p" class="section-name selfRef"><code>resource_clients</code> Metadata Parameter</a>
+        </h3>
+<p id="section-9.1-1">This specification defines the "resource_clients" protected-resource metadata parameter. This parameter is one mechanism for establishing the relationship between a protected resource audience and a requesting client. A protected resource <span class="bcp14">MAY</span> omit this parameter when the authorization server can establish the relationship by local policy or by validating a <code>private_key_jwt</code> client assertion using the protected resource's <code>jwks_uri</code>.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<p id="section-9.1-2">The "resource_clients" parameter is a JSON array. Each array element is a JSON object identifying an OAuth client that represents the protected resource when requesting operations on tokens whose audience identifies the protected resource.<a href="#section-9.1-2" class="pilcrow">¶</a></p>
+<p id="section-9.1-3">Each array element has the following attributes:<a href="#section-9.1-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9.1-4">
+          <dt id="section-9.1-4.1">authorization_server:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-4.2">
+            <p id="section-9.1-4.2.1"><span class="bcp14">OPTIONAL</span>. An issuer identifier for the authorization server at which the "client_id" value is scoped. This attribute is <span class="bcp14">REQUIRED</span> when the "client_id" is an authorization-server local client identifier. This attribute <span class="bcp14">MUST</span> be omitted when the "client_id" is a globally scoped client identifier.<a href="#section-9.1-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.1-4.3">client_id:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-4.4">
+            <p id="section-9.1-4.4.1"><span class="bcp14">REQUIRED</span>. The OAuth client identifier that represents the protected resource.<a href="#section-9.1-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-9.1-5">If the "authorization_server" attribute is present, the "client_id" value is scoped to the authorization server identified by that attribute.<a href="#section-9.1-5" class="pilcrow">¶</a></p>
+<p id="section-9.1-6">If the "authorization_server" attribute is omitted, the "client_id" value is a globally scoped client identifier.<a href="#section-9.1-6" class="pilcrow">¶</a></p>
+<p id="section-9.1-7">An authorization server <span class="bcp14">MUST</span> ignore any attribute of a "resource_clients" entry that it does not understand.<a href="#section-9.1-7" class="pilcrow">¶</a></p>
+<p id="section-9.1-8">The "resource_clients" parameter identifies clients that represent the protected resource. It does not identify which operations those clients are permitted to perform. The set of operations a client identified by "resource_clients" can perform is determined by the authorization server's policy.<a href="#section-9.1-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="metadata-example">
+<section id="section-9.2">
+        <h3 id="name-metadata-example">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-metadata-example" class="section-name selfRef">Metadata Example</a>
+        </h3>
+<p id="section-9.2-1">The following example shows a protected resource that publishes both <code>jwks_uri</code> and <code>resource_clients</code>. The <code>jwks_uri</code> enables <code>private_key_jwt</code>-based establishment of the audience-client relationship. The <code>resource_clients</code> parameter explicitly identifies clients that represent the protected resource at two authorization servers and by a globally scoped client identifier:<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-9.2-2">
+<pre>
+{
+  "resource": "https://api.example.com",
+  "authorization_servers": [
+    "https://as-a.example",
+    "https://as-b.example"
+  ],
+  "jwks_uri": "https://api.example.com/jwks.json",
+  "resource_clients": [
+    {
+      "authorization_server": "https://as-a.example",
+      "client_id": "rs-client-at-as-a"
+    },
+    {
+      "authorization_server": "https://as-b.example",
+      "client_id": "rs-client-at-as-b"
+    },
+    {
+      "client_id": "https://api.example.com/oauth-client"
+    }
+  ]
+}
+</pre><a href="#section-9.2-2" class="pilcrow">¶</a>
+</div>
+<p id="section-9.2-3">The following example shows a protected resource that relies on <code>private_key_jwt</code>-based establishment of the audience-client relationship and therefore omits <code>resource_clients</code>:<a href="#section-9.2-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-9.2-4">
+<pre>
+{
+  "resource": "https://api.example.com",
+  "authorization_servers": [
+    "https://as-a.example"
+  ],
+  "jwks_uri": "https://api.example.com/jwks.json"
+}
+</pre><a href="#section-9.2-4" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="selecting-a-resource-client-entry">
+<section id="section-9.3">
+        <h3 id="name-selecting-a-resource-client">
+<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-selecting-a-resource-client" class="section-name selfRef">Selecting a Resource Client Entry</a>
+        </h3>
+<p id="section-9.3-1">After obtaining protected-resource metadata containing "resource_clients", the authorization server selects an applicable entry as follows.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
+<p id="section-9.3-2">If an entry contains an "authorization_server" attribute, the authorization server <span class="bcp14">MUST</span> use the entry only if the "authorization_server" value identifies the authorization server processing the request.<a href="#section-9.3-2" class="pilcrow">¶</a></p>
+<p id="section-9.3-3">If an entry omits the "authorization_server" attribute, the authorization server <span class="bcp14">MUST</span> treat the "client_id" as a globally scoped client identifier.<a href="#section-9.3-3" class="pilcrow">¶</a></p>
+<p id="section-9.3-4">If no applicable entry is found, the authorization server <span class="bcp14">MUST</span> reject the request unless another mechanism accepted by authorization server policy establishes the audience-client relationship.<a href="#section-9.3-4" class="pilcrow">¶</a></p>
+<p id="section-9.3-5">If multiple applicable entries are found and the authorization server cannot select a single entry unambiguously, the authorization server <span class="bcp14">MUST</span> reject the request.<a href="#section-9.3-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="client-comparison">
+<section id="section-9.4">
+        <h3 id="name-client-comparison">
+<a href="#section-9.4" class="section-number selfRef">9.4. </a><a href="#name-client-comparison" class="section-name selfRef">Client Comparison</a>
+        </h3>
+<p id="section-9.4-1">When the audience-client relationship is established using <code>resource_clients</code>, the authorization server <span class="bcp14">MUST</span> compare the requesting client to the <code>client_id</code> value in the selected <code>resource_clients</code> entry.<a href="#section-9.4-1" class="pilcrow">¶</a></p>
+<p id="section-9.4-2">When the selected entry contains an <code>authorization_server</code> attribute, the comparison is made against the authorization-server local client identifier of the requesting client.<a href="#section-9.4-2" class="pilcrow">¶</a></p>
+<p id="section-9.4-3">When the selected entry omits the <code>authorization_server</code> attribute, the <code>client_id</code> value is a globally scoped client identifier. The authorization server <span class="bcp14">MUST</span> verify that the requesting client is bound to the globally scoped client identifier.<a href="#section-9.4-3" class="pilcrow">¶</a></p>
+<p id="section-9.4-4">If both <code>private_key_jwt</code> validation using <code>jwks_uri</code> and <code>resource_clients</code> are used, the authorization server <span class="bcp14">MUST</span> verify that the client identifier in the client assertion is consistent with the applicable <code>resource_clients</code> entry. If the values are inconsistent, the authorization server <span class="bcp14">MUST</span> reject the request unless local policy explicitly allows one mechanism to take precedence.<a href="#section-9.4-4" class="pilcrow">¶</a></p>
+<p id="section-9.4-5">If the authorization server cannot establish that the requesting client matches, or is bound to, the client associated with the selected protected resource identifier, the authorization server <span class="bcp14">MUST</span> reject the request.<a href="#section-9.4-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="token-exchange">
+<section id="section-10">
+      <h2 id="name-application-to-token-exchan">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-application-to-token-exchan" class="section-name selfRef">Application to Token Exchange</a>
+      </h2>
+<p id="section-10-1">This section applies the model defined by this specification to OAuth 2.0 Token Exchange <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>. The audience-bound token is the subject token, and the requesting client is the client making the token exchange request.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<div id="token-exchange-processing">
+<section id="section-10.1">
+        <h3 id="name-token-exchange-processing">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-token-exchange-processing" class="section-name selfRef">Token Exchange Processing</a>
+        </h3>
+<p id="section-10.1-1">At token exchange time, the authorization server performs the following checks:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-10.1-2">
+<li id="section-10.1-2.1">
+            <p id="section-10.1-2.1.1">Validate the token exchange request according to <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> and local policy.<a href="#section-10.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-10.1-2.2">
+            <p id="section-10.1-2.2.1">Authenticate or otherwise identify the client making the token exchange request according to OAuth 2.0 and authorization server policy.<a href="#section-10.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-10.1-2.3">
+            <p id="section-10.1-2.3.1">Validate the subject token according to token format, issuer, audience, expiration, and local policy.<a href="#section-10.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-10.1-2.4">
+            <p id="section-10.1-2.4.1">Determine the selected protected resource identifier from the subject token audience, as described in <a href="#token-audience-processing" class="auto internal xref">Section 6</a>.<a href="#section-10.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-10.1-2.5">
+            <p id="section-10.1-2.5.1">Verify that the selected protected resource identifier is acceptable to the authorization server according to local policy.<a href="#section-10.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-10.1-2.6">
+            <p id="section-10.1-2.6.1">If metadata-based processing is used, obtain and verify protected-resource metadata for the selected protected resource identifier.<a href="#section-10.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-10.1-2.7">
+            <p id="section-10.1-2.7.1">Establish the audience-client relationship as described in <a href="#establishing-relationship" class="auto internal xref">Section 7</a>.<a href="#section-10.1-2.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-10.1-2.8">
+            <p id="section-10.1-2.8.1">If the relationship cannot be established, reject the request.<a href="#section-10.1-2.8.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-10.1-2.9">
+            <p id="section-10.1-2.9.1">If the subject token contains a <code>may_act</code> claim, evaluate it according to <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> and local policy, as described in <a href="#may-act" class="auto internal xref">Section 10.3</a>.<a href="#section-10.1-2.9.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-10.1-2.10">
+            <p id="section-10.1-2.10.1">Apply all remaining token exchange authorization policy, including policy for the requested audience, resource, scope, subject, actor, delegation model, and consent.<a href="#section-10.1-2.10.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-10.1-2.11">
+            <p id="section-10.1-2.11.1">Issue the exchanged token only if all checks succeed.<a href="#section-10.1-2.11.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-10.1-3">Use of the mechanisms defined by this specification only establishes that the requesting client is associated with the subject token audience. It does not authorize the issuance of a token for any particular requested resource, scope, subject, or actor chain.<a href="#section-10.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="token-exchange-error-handling">
+<section id="section-10.2">
+        <h3 id="name-token-exchange-error-handli">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-token-exchange-error-handli" class="section-name selfRef">Token Exchange Error Handling</a>
+        </h3>
+<p id="section-10.2-1">If the authorization server rejects the token exchange request because the requesting client is not permitted to exchange the subject token under this specification, the authorization server <span class="bcp14">SHOULD</span> return the "invalid_request" or "invalid_grant" error code defined by <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>, according to the nature of the failure and local policy.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<p id="section-10.2-2">The authorization server <span class="bcp14">SHOULD NOT</span> disclose sensitive information about protected-resource metadata, configured mappings, keys, or permitted client identifiers in error responses.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
+<p id="section-10.2-3">For example, the authorization server can return:<a href="#section-10.2-3" class="pilcrow">¶</a></p>
+<div class="lang-http-message sourcecode" id="section-10.2-4">
+<pre>
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{
+  "error": "invalid_grant",
+  "error_description": "The subject token cannot be exchanged by the client."
+}
+</pre><a href="#section-10.2-4" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="may-act">
+<section id="section-10.3">
+        <h3 id="name-relationship-to-may_act">
+<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-relationship-to-may_act" class="section-name selfRef">Relationship to <code>may_act</code></a>
+        </h3>
+<p id="section-10.3-1">The <code>may_act</code> claim defined by <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> identifies an actor that is authorized to act with respect to the subject token. It is appropriate when the issuer of the subject token knows the authorized actor at token issuance time.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+<p id="section-10.3-2">If the subject token contains a <code>may_act</code> claim, the authorization server <span class="bcp14">MUST</span> evaluate it according to <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> and local policy. A <code>may_act</code> claim that identifies a permitted actor takes precedence over the audience-client relationship mechanisms defined in this specification for determining which actor is explicitly authorized by the subject token.<a href="#section-10.3-2" class="pilcrow">¶</a></p>
+<p id="section-10.3-3">This specification does not replace <code>may_act</code>. An authorization server <span class="bcp14">MAY</span> require both:<a href="#section-10.3-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.3-4.1">
+            <p id="section-10.3-4.1.1">that the requesting client satisfy the audience-client relationship defined by this specification; and<a href="#section-10.3-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.3-4.2">
+            <p id="section-10.3-4.2.1">that the subject token contain an appropriate <code>may_act</code> claim.<a href="#section-10.3-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-10.3-5">An authorization server <span class="bcp14">MAY</span> also use this specification without a <code>may_act</code> claim when local policy permits audience-anchored token exchange.<a href="#section-10.3-5" class="pilcrow">¶</a></p>
+<p id="section-10.3-6">When the audience-client relationship is established using a <code>private_key_jwt</code> client assertion validated with the protected resource's <code>jwks_uri</code>, that validation does not itself create or replace a <code>may_act</code> claim. It only establishes that the requesting client is associated with the protected resource identified by the subject token audience. An authorization server can still require an appropriate <code>may_act</code> claim when its policy requires explicit actor authorization in the subject token.<a href="#section-10.3-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="token-introspection">
+<section id="section-11">
+      <h2 id="name-application-to-token-intros">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-application-to-token-intros" class="section-name selfRef">Application to Token Introspection</a>
+      </h2>
+<p id="section-11-1">This section applies the model defined by this specification to OAuth 2.0 Token Introspection <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>. The audience-bound token is the token presented in the "token" parameter of the introspection request, and the requesting client is the client authenticating to the introspection endpoint on behalf of a protected resource.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-11-2"><span><a href="https://rfc-editor.org/rfc/rfc7662#section-4" class="relref">Section 4</a> of [<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> requires that, if a token can be used only at certain resource servers, the authorization server determine whether the token can be used at the resource server making the introspection call. This specification provides interoperable mechanisms for making that determination when the protected resource is identified by the token audience and the caller is identified by its OAuth client identifier.<a href="#section-11-2" class="pilcrow">¶</a></p>
+<div id="token-introspection-processing">
+<section id="section-11.1">
+        <h3 id="name-token-introspection-process">
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-token-introspection-process" class="section-name selfRef">Token Introspection Processing</a>
+        </h3>
+<p id="section-11.1-1">When processing an introspection request, the authorization server performs the following checks:<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-11.1-2">
+<li id="section-11.1-2.1">
+            <p id="section-11.1-2.1.1">Authenticate the client making the introspection request according to <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> and authorization server policy.<a href="#section-11.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-11.1-2.2">
+            <p id="section-11.1-2.2.1">Determine whether the token is active, according to <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>.<a href="#section-11.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-11.1-2.3">
+            <p id="section-11.1-2.3.1">Determine the selected protected resource identifier from the token audience, as described in <a href="#token-audience-processing" class="auto internal xref">Section 6</a>.<a href="#section-11.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-11.1-2.4">
+            <p id="section-11.1-2.4.1">Verify that the selected protected resource identifier is acceptable to the authorization server according to local policy.<a href="#section-11.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-11.1-2.5">
+            <p id="section-11.1-2.5.1">If metadata-based processing is used, obtain and verify protected-resource metadata for the selected protected resource identifier.<a href="#section-11.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-11.1-2.6">
+            <p id="section-11.1-2.6.1">Establish the audience-client relationship as described in <a href="#establishing-relationship" class="auto internal xref">Section 7</a>.<a href="#section-11.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-11.1-2.7">
+            <p id="section-11.1-2.7.1">If the relationship cannot be established, treat the token as one the requesting client is not allowed to know about, as described in <a href="#introspection-error-handling" class="auto internal xref">Section 11.2</a>.<a href="#section-11.1-2.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-11.1-2.8">
+            <p id="section-11.1-2.8.1">Apply all remaining introspection policy, including policy determining which token information is included in the introspection response.<a href="#section-11.1-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-11.1-3">Establishing the audience-client relationship only establishes that the requesting client is associated with the token audience. It does not by itself determine which information about the token the authorization server discloses in the introspection response.<a href="#section-11.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="introspection-error-handling">
+<section id="section-11.2">
+        <h3 id="name-token-introspection-error-h">
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-token-introspection-error-h" class="section-name selfRef">Token Introspection Error Handling</a>
+        </h3>
+<p id="section-11.2-1">If the authorization server cannot establish an audience-client relationship between the selected protected resource identifier and the requesting client, the authorization server <span class="bcp14">MUST NOT</span> return information about the token other than an indication that it is not active. As described in <span><a href="https://rfc-editor.org/rfc/rfc7662#section-2.2" class="relref">Section 2.2</a> of [<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> and <span><a href="https://rfc-editor.org/rfc/rfc7662#section-2.3" class="relref">Section 2.3</a> of [<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>, a properly formed and authorized introspection request for a token that the protected resource is not allowed to know about is not considered an error, and the authorization server responds with an inactive token response.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
+<p id="section-11.2-2">For example, the authorization server can return:<a href="#section-11.2-2" class="pilcrow">¶</a></p>
+<div class="lang-http-message sourcecode" id="section-11.2-3">
+<pre>
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "active": false
+}
+</pre><a href="#section-11.2-3" class="pilcrow">¶</a>
+</div>
+<p id="section-11.2-4">The authorization server <span class="bcp14">SHOULD NOT</span> disclose, through the introspection response or any other observable behavior, whether the request failed because the token is inactive or because the audience-client relationship could not be established.<a href="#section-11.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="other-applications">
+<section id="section-12">
+      <h2 id="name-other-applications">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-other-applications" class="section-name selfRef">Other Applications</a>
+      </h2>
+<p id="section-12-1">Other specifications <span class="bcp14">MAY</span> apply the model defined by this specification to additional operations in which a client requests an authorization server to act on an audience-bound token on behalf of the protected resource identified by the token audience.<a href="#section-12-1" class="pilcrow">¶</a></p>
+<p id="section-12-2">A specification applying this model <span class="bcp14">SHOULD</span> define:<a href="#section-12-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12-3.1">
+          <p id="section-12-3.1.1">which token in the request is the audience-bound token;<a href="#section-12-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-3.2">
+          <p id="section-12-3.2.1">which client is the requesting client;<a href="#section-12-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-3.3">
+          <p id="section-12-3.3.1">the processing steps for the operation, including where establishment of the audience-client relationship occurs relative to other checks; and<a href="#section-12-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-3.4">
+          <p id="section-12-3.4.1">the response to be returned when the audience-client relationship cannot be established.<a href="#section-12-3.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-13">
+      <h2 id="name-security-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="protected-resource-metadata-does-not-establish-audience-validity">
+<section id="section-13.1">
+        <h3 id="name-protected-resource-metadata-">
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-protected-resource-metadata-" class="section-name selfRef">Protected Resource Metadata Does Not Establish Audience Validity</a>
+        </h3>
+<p id="section-13.1-1">An authorization server <span class="bcp14">MUST NOT</span> treat protected-resource metadata, including <code>jwks_uri</code> or <code>resource_clients</code>, as establishing that an audience value is valid. The authorization server <span class="bcp14">MUST</span> first determine, according to its own policy, that the token audience identifies a protected resource for which the authorization server is willing to process the requested operation. Only then can the authorization server use protected-resource metadata associated with that audience to establish the relationship between the protected resource and the requesting client.<a href="#section-13.1-1" class="pilcrow">¶</a></p>
+<p id="section-13.1-2">If an attacker can cause an authorization server to issue a token with an attacker-controlled audience, the attacker might also control the protected-resource metadata for that audience. In such a case, the metadata can legitimately identify an attacker-controlled client as the client representing that audience. This specification relies on the authorization server's existing audience and resource policy to prevent such an audience from being used to obtain tokens for unrelated resources or information about unrelated tokens.<a href="#section-13.1-2" class="pilcrow">¶</a></p>
+<p id="section-13.1-3">The mechanisms defined by this specification only establish that a requesting client is associated with the token audience. They do not authorize issuance of a token for any particular requested resource, scope, subject, or actor chain, and they do not determine what token information is disclosed by introspection.<a href="#section-13.1-3" class="pilcrow">¶</a></p>
+<p id="section-13.1-4">Authorization servers <span class="bcp14">MUST</span> apply independent policy to the requested operation before performing it.<a href="#section-13.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="different-operations-have-different-risk">
+<section id="section-13.2">
+        <h3 id="name-different-operations-have-d">
+<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-different-operations-have-d" class="section-name selfRef">Different Operations Have Different Risk</a>
+        </h3>
+<p id="section-13.2-1">Operations to which this specification applies carry different risks. Token introspection discloses information about a token to the requesting client, while token exchange issues a new token that can be used at other protected resources.<a href="#section-13.2-1" class="pilcrow">¶</a></p>
+<p id="section-13.2-2">The <code>resource_clients</code> metadata parameter identifies clients that represent a protected resource, not the operations those clients are permitted to perform. An authorization server <span class="bcp14">SHOULD</span> determine, according to local policy, which operations each client with an established audience-client relationship is permitted to perform, and <span class="bcp14">SHOULD NOT</span> permit an operation, such as token exchange, solely because the audience-client relationship has been established.<a href="#section-13.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="metadata-substitution">
+<section id="section-13.3">
+        <h3 id="name-metadata-substitution">
+<a href="#section-13.3" class="section-number selfRef">13.3. </a><a href="#name-metadata-substitution" class="section-name selfRef">Metadata Substitution</a>
+        </h3>
+<p id="section-13.3-1">An authorization server <span class="bcp14">MUST</span> verify that the "resource" value in the protected-resource metadata corresponds to the selected protected resource identifier. Metadata whose "resource" value does not correspond to the selected protected resource identifier <span class="bcp14">MUST NOT</span> be used.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
+<p id="section-13.3-2">If an attacker can substitute protected-resource metadata, the attacker could cause the authorization server to use an attacker-controlled <code>jwks_uri</code> or attacker-controlled <code>resource_clients</code> value. Therefore, the authorization server <span class="bcp14">MUST</span> verify that the obtained metadata is the metadata for the selected protected resource identifier and <span class="bcp14">MUST</span> follow the discovery and validation rules of <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>.<a href="#section-13.3-2" class="pilcrow">¶</a></p>
+<p id="section-13.3-3">Authorization servers <span class="bcp14">SHOULD</span> use HTTPS, normal certificate validation, and the discovery and verification rules of <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> when obtaining protected-resource metadata.<a href="#section-13.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="protected-resource-key-compromise">
+<section id="section-13.4">
+        <h3 id="name-protected-resource-key-comp">
+<a href="#section-13.4" class="section-number selfRef">13.4. </a><a href="#name-protected-resource-key-comp" class="section-name selfRef">Protected Resource Key Compromise</a>
+        </h3>
+<p id="section-13.4-1">When the audience-client relationship is established using <code>private_key_jwt</code> and the protected resource's <code>jwks_uri</code>, any party holding a private key corresponding to a key in that JWK Set can establish an audience-client relationship with the protected resource. Protected resources <span class="bcp14">SHOULD</span> protect such private keys accordingly, and <span class="bcp14">SHOULD</span> use keys in that JWK Set only for purposes for which they are intended to be trusted.<a href="#section-13.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="server-side-request-forgery">
+<section id="section-13.5">
+        <h3 id="name-server-side-request-forgery">
+<a href="#section-13.5" class="section-number selfRef">13.5. </a><a href="#name-server-side-request-forgery" class="section-name selfRef">Server-Side Request Forgery</a>
+        </h3>
+<p id="section-13.5-1">Dereferencing protected-resource metadata can create a server-side request forgery risk. An authorization server <span class="bcp14">MUST NOT</span> dereference arbitrary audience values supplied by an attacker, a client, or an untrusted token issuer.<a href="#section-13.5-1" class="pilcrow">¶</a></p>
+<p id="section-13.5-2">Protected-resource metadata discovery defined by this specification <span class="bcp14">MUST</span> only be performed for HTTPS audience values that the authorization server has already determined to be acceptable according to local policy.<a href="#section-13.5-2" class="pilcrow">¶</a></p>
+<p id="section-13.5-3">Authorization servers <span class="bcp14">SHOULD</span> apply additional fetch protections, including:<a href="#section-13.5-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13.5-4.1">
+            <p id="section-13.5-4.1.1">rejecting private, loopback, link-local, and otherwise prohibited network destinations unless explicitly allowed by local policy;<a href="#section-13.5-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.5-4.2">
+            <p id="section-13.5-4.2.1">limiting redirects;<a href="#section-13.5-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.5-4.3">
+            <p id="section-13.5-4.3.1">enforcing response size limits;<a href="#section-13.5-4.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.5-4.4">
+            <p id="section-13.5-4.4.1">enforcing timeouts;<a href="#section-13.5-4.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.5-4.5">
+            <p id="section-13.5-4.5.1">caching validated metadata; and<a href="#section-13.5-4.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.5-4.6">
+            <p id="section-13.5-4.6.1">avoiding inclusion of sensitive request headers when fetching metadata.<a href="#section-13.5-4.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="multiple-audience-values">
+<section id="section-13.6">
+        <h3 id="name-multiple-audience-values">
+<a href="#section-13.6" class="section-number selfRef">13.6. </a><a href="#name-multiple-audience-values" class="section-name selfRef">Multiple Audience Values</a>
+        </h3>
+<p id="section-13.6-1">If a token contains multiple audience values, the authorization server <span class="bcp14">MUST</span> determine a single selected protected resource identifier. If the authorization server cannot determine the protected resource context unambiguously, it <span class="bcp14">MUST</span> reject the request.<a href="#section-13.6-1" class="pilcrow">¶</a></p>
+<p id="section-13.6-2">This prevents a client associated with one audience from using that relationship to perform an operation under a different audience context.<a href="#section-13.6-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="confidentiality-of-metadata">
+<section id="section-13.7">
+        <h3 id="name-confidentiality-of-metadata">
+<a href="#section-13.7" class="section-number selfRef">13.7. </a><a href="#name-confidentiality-of-metadata" class="section-name selfRef">Confidentiality of Metadata</a>
+        </h3>
+<p id="section-13.7-1">The "resource_clients" metadata parameter can reveal information about the internal topology, client registrations, or downstream call patterns of a protected resource. A <code>jwks_uri</code> can reveal information about the key material used by a protected resource to establish the audience-client relationship.<a href="#section-13.7-1" class="pilcrow">¶</a></p>
+<p id="section-13.7-2">Protected resources should publish this metadata only when the operational benefits outweigh the disclosure risk.<a href="#section-13.7-2" class="pilcrow">¶</a></p>
+<p id="section-13.7-3">Deployments that consider this information sensitive can use local authorization server policy instead of public metadata discovery, or can restrict metadata publication according to mechanisms outside the scope of this specification.<a href="#section-13.7-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-14">
+      <h2 id="name-iana-considerations">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<div id="oauth-protected-resource-metadata-registration">
+<section id="section-14.1">
+        <h3 id="name-oauth-protected-resource-me">
+<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-oauth-protected-resource-me" class="section-name selfRef">OAuth Protected Resource Metadata Registration</a>
+        </h3>
+<p id="section-14.1-1">IANA is requested to register the following value in the "OAuth Protected Resource Metadata" registry established by <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>.<a href="#section-14.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-14.1-2">
+          <dt id="section-14.1-2.1">Metadata Name:</dt>
+          <dd style="margin-left: 1.5em" id="section-14.1-2.2">
+            <p id="section-14.1-2.2.1">resource_clients<a href="#section-14.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-14.1-2.3">Metadata Description:</dt>
+          <dd style="margin-left: 1.5em" id="section-14.1-2.4">
+            <p id="section-14.1-2.4.1">JSON array identifying OAuth clients that represent the protected resource when requesting operations, such as OAuth 2.0 Token Exchange or OAuth 2.0 Token Introspection, on tokens whose audience identifies the protected resource. This parameter is one mechanism for establishing the relationship between a token audience and a requesting client.<a href="#section-14.1-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-14.1-2.5">Change Controller:</dt>
+          <dd style="margin-left: 1.5em" id="section-14.1-2.6">
+            <p id="section-14.1-2.6.1">IETF<a href="#section-14.1-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-14.1-2.7">Specification Document(s):</dt>
+          <dd style="margin-left: 1.5em" id="section-14.1-2.8">
+            <p id="section-14.1-2.8.1">This document<a href="#section-14.1-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgements">
+<section id="section-15">
+      <h2 id="name-acknowledgements">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-acknowledgements" class="section-name selfRef">Acknowledgements</a>
+      </h2>
+<p id="section-15-1">The authors would like to thank the following individuals who contributed ideas, feedback, and wording that helped shape the final specification: Henrik Kroll.<a href="#section-15-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-16">
+      <h2 id="name-references">
+<a href="#section-16" class="section-number selfRef">16. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-16.1">
+        <h3 id="name-normative-references">
+<a href="#section-16.1" class="section-number selfRef">16.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.ietf-oauth-client-id-metadata-document">[I-D.ietf-oauth-client-id-metadata-document]</dt>
+        <dd>
+<span class="refTitle">"OAuth Client ID Metadata Document"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/">https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6749">[RFC6749]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6749">https://www.rfc-editor.org/rfc/rfc6749</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7519">[RFC7519]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Token (JWT)"</span>, <span class="seriesInfo">RFC 7519</span>, <span class="seriesInfo">DOI 10.17487/RFC7519</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7519">https://www.rfc-editor.org/rfc/rfc7519</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7523">[RFC7523]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Campbell, B.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"JSON Web Token (JWT) Profile for OAuth 2.0 Client Authentication and Authorization Grants"</span>, <span class="seriesInfo">RFC 7523</span>, <span class="seriesInfo">DOI 10.17487/RFC7523</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7523">https://www.rfc-editor.org/rfc/rfc7523</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7662">[RFC7662]</dt>
+        <dd>
+<span class="refAuthor">Richer, J., Ed.</span>, <span class="refTitle">"OAuth 2.0 Token Introspection"</span>, <span class="seriesInfo">RFC 7662</span>, <span class="seriesInfo">DOI 10.17487/RFC7662</span>, <time datetime="2015-10" class="refDate">October 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7662">https://www.rfc-editor.org/rfc/rfc7662</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8693">[RFC8693]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8693">https://www.rfc-editor.org/rfc/rfc8693</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9728">[RFC9728]</dt>
+      <dd>
+<span class="refAuthor">Jones, M.B.</span>, <span class="refAuthor">Hunt, P.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth 2.0 Protected Resource Metadata"</span>, <span class="seriesInfo">RFC 9728</span>, <span class="seriesInfo">DOI 10.17487/RFC9728</span>, <time datetime="2025-04" class="refDate">April 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9728">https://www.rfc-editor.org/rfc/rfc9728</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-16.2">
+        <h3 id="name-informative-references">
+<a href="#section-16.2" class="section-number selfRef">16.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="OpenID.Core">[OpenID.Core]</dt>
+      <dd>
+<span class="refAuthor">Sakimura, N.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Medeiros, B. de.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OpenID Connect Core 1.0"</span>, <time datetime="2014-11-08" class="refDate">8 November 2014</time>, <span>&lt;<a href="https://openid.net/specs/openid-connect-core-1_0.html">https://openid.net/specs/openid-connect-core-1_0.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="examples">
+<section id="appendix-A">
+      <h2 id="name-examples">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-examples" class="section-name selfRef">Examples</a>
+      </h2>
+<div id="example-token-exchange-using-resourceclients">
+<section id="appendix-A.1">
+        <h3 id="name-example-token-exchange-usin">
+<a href="#appendix-A.1" class="section-number selfRef">A.1. </a><a href="#name-example-token-exchange-usin" class="section-name selfRef">Example: Token Exchange Using <code>resource_clients</code></a>
+        </h3>
+<p id="appendix-A.1-1">In this example, a client calls a protected resource with an access token whose audience is "https://api.example.com":<a href="#appendix-A.1-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-A.1-2">
+<pre>
+{
+  "iss": "https://issuer.example",
+  "sub": "248289761001",
+  "aud": "https://api.example.com",
+  "scope": "read write",
+  "exp": 1710000000
+}
+</pre><a href="#appendix-A.1-2" class="pilcrow">¶</a>
+</div>
+<p id="appendix-A.1-3">The protected resource needs to call a downstream service protected by "https://as-a.example". The protected resource authenticates to "https://as-a.example" as the OAuth client "rs-client-at-as-a" and makes a token exchange request.<a href="#appendix-A.1-3" class="pilcrow">¶</a></p>
+<p id="appendix-A.1-4">The authorization server obtains protected-resource metadata for "https://api.example.com" and receives:<a href="#appendix-A.1-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-A.1-5">
+<pre>
+{
+  "resource": "https://api.example.com",
+  "authorization_servers": [
+    "https://as-a.example"
+  ],
+  "resource_clients": [
+    {
+      "authorization_server": "https://as-a.example",
+      "client_id": "rs-client-at-as-a"
+    }
+  ]
+}
+</pre><a href="#appendix-A.1-5" class="pilcrow">¶</a>
+</div>
+<p id="appendix-A.1-6">The authorization server verifies that:<a href="#appendix-A.1-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A.1-7.1">
+            <p id="appendix-A.1-7.1.1">the subject token is valid;<a href="#appendix-A.1-7.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="appendix-A.1-7.2">
+            <p id="appendix-A.1-7.2.1">the subject token audience is "https://api.example.com";<a href="#appendix-A.1-7.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="appendix-A.1-7.3">
+            <p id="appendix-A.1-7.3.1">the protected-resource metadata "resource" value corresponds to "https://api.example.com";<a href="#appendix-A.1-7.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="appendix-A.1-7.4">
+            <p id="appendix-A.1-7.4.1">the selected "resource_clients" entry is scoped to "https://as-a.example";<a href="#appendix-A.1-7.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="appendix-A.1-7.5">
+            <p id="appendix-A.1-7.5.1">the requesting client is "rs-client-at-as-a"; and<a href="#appendix-A.1-7.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="appendix-A.1-7.6">
+            <p id="appendix-A.1-7.6.1">all other token exchange policy permits issuing the requested token.<a href="#appendix-A.1-7.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="appendix-A.1-8">If all checks succeed, the authorization server issues the exchanged token.<a href="#appendix-A.1-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="example-token-introspection-using-privatekeyjwt-and-jwksuri">
+<section id="appendix-A.2">
+        <h3 id="name-example-token-introspection">
+<a href="#appendix-A.2" class="section-number selfRef">A.2. </a><a href="#name-example-token-introspection" class="section-name selfRef">Example: Token Introspection Using <code>private_key_jwt</code> and <code>jwks_uri</code></a>
+        </h3>
+<p id="appendix-A.2-1">In this example, a protected resource publishes a <code>jwks_uri</code> but omits <code>resource_clients</code>:<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-A.2-2">
+<pre>
+{
+  "resource": "https://api.example.com",
+  "authorization_servers": [
+    "https://as-a.example"
+  ],
+  "jwks_uri": "https://api.example.com/jwks.json"
+}
+</pre><a href="#appendix-A.2-2" class="pilcrow">¶</a>
+</div>
+<p id="appendix-A.2-3">The protected resource receives an opaque access token issued by "https://as-a.example". The protected resource calls the introspection endpoint of "https://as-a.example", authenticating as client "rs-client-at-as-a" using <code>private_key_jwt</code>, with a client assertion signed using a private key whose public key is published at "https://api.example.com/jwks.json":<a href="#appendix-A.2-3" class="pilcrow">¶</a></p>
+<div class="lang-http-message sourcecode" id="appendix-A.2-4">
+<pre>
+POST /introspect HTTP/1.1
+Host: as-a.example
+Content-Type: application/x-www-form-urlencoded
+
+token=mF_9.B5f-4.1JqM&amp;
+client_assertion_type=
+urn%3Aietf%3Aparams%3Aoauth%3Aclient-assertion-type%3Ajwt-bearer&amp;
+client_assertion=eyJhbGciOiJFUzI1NiIsImtpZCI6InJzLWtleS0xIn0...
+</pre><a href="#appendix-A.2-4" class="pilcrow">¶</a>
+</div>
+<p id="appendix-A.2-5">The authorization server looks up the token and determines that it is active and that its audience is "https://api.example.com". It obtains the protected-resource metadata for "https://api.example.com", verifies that the metadata <code>resource</code> value corresponds to the token audience, retrieves the JWK Set from the <code>jwks_uri</code>, and validates the client assertion using a key from that JWK Set.<a href="#appendix-A.2-5" class="pilcrow">¶</a></p>
+<p id="appendix-A.2-6">If the client assertion is valid, the authorization server treats the audience-client relationship as established and returns an introspection response according to its introspection policy. Otherwise, the authorization server returns a response indicating that the token is not active.<a href="#appendix-A.2-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="example-token-exchange-using-privatekeyjwt-jwksuri-and-resourceclients">
+<section id="appendix-A.3">
+        <h3 id="name-example-token-exchange-using">
+<a href="#appendix-A.3" class="section-number selfRef">A.3. </a><a href="#name-example-token-exchange-using" class="section-name selfRef">Example: Token Exchange Using <code>private_key_jwt</code>, <code>jwks_uri</code>, and <code>resource_clients</code></a>
+        </h3>
+<p id="appendix-A.3-1">In this example, a protected resource publishes both <code>jwks_uri</code> and <code>resource_clients</code>:<a href="#appendix-A.3-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-A.3-2">
+<pre>
+{
+  "resource": "https://api.example.com",
+  "authorization_servers": [
+    "https://as-a.example"
+  ],
+  "jwks_uri": "https://api.example.com/jwks.json",
+  "resource_clients": [
+    {
+      "authorization_server": "https://as-a.example",
+      "client_id": "rs-client-at-as-a"
+    }
+  ]
+}
+</pre><a href="#appendix-A.3-2" class="pilcrow">¶</a>
+</div>
+<p id="appendix-A.3-3">The requesting client authenticates to the token endpoint using <code>private_key_jwt</code> and makes a token exchange request. The authorization server validates the client assertion using the JWK Set obtained from "https://api.example.com/jwks.json".<a href="#appendix-A.3-3" class="pilcrow">¶</a></p>
+<p id="appendix-A.3-4">The authorization server also verifies that the client identifier in the client assertion, "rs-client-at-as-a", is consistent with the applicable <code>resource_clients</code> entry. If the client assertion identifies a different client and local policy does not explicitly allow one mechanism to take precedence, the authorization server rejects the request.<a href="#appendix-A.3-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="document-history">
+<section id="appendix-B">
+      <h2 id="name-document-history">
+<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-B-1">-01<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-B-2.1">
+          <p id="appendix-B-2.1.1">Broadened scope from token exchange to any operation in which a client acts on a token on behalf of the protected resource identified by its audience.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1">Changed title to "OAuth 2.0 Audience-Bound Client Authorization".<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.3">
+          <p id="appendix-B-2.3.1">Added application of the model to OAuth 2.0 Token Introspection.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.4">
+          <p id="appendix-B-2.4.1">Added guidance for applying the model to other operations.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.5">
+          <p id="appendix-B-2.5.1">Renamed the <code>token_exchange_clients</code> protected-resource metadata parameter to <code>resource_clients</code>.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.6">
+          <p id="appendix-B-2.6.1">Restricted the <code>jwks_uri</code> mechanism to <code>private_key_jwt</code> client authentication, applicable at any authorization server endpoint.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.7">
+          <p id="appendix-B-2.7.1">Aligned the strength of the consistency requirement between <code>jwks_uri</code> and <code>resource_clients</code> mechanisms.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.8">
+          <p id="appendix-B-2.8.1">Added security considerations for differing operation risk and protected resource key compromise.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="appendix-B-3">-00<a href="#appendix-B-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-B-4.1">
+          <p id="appendix-B-4.1.1">Initial version.<a href="#appendix-B-4.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-C">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Yaron Zehavi</span></div>
+<div dir="auto" class="left"><span class="org">Raiffeisen Bank International</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:yaron.zehavi@rbinternational.com" class="email">yaron.zehavi@rbinternational.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
