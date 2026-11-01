@@ -1,13 +1,13 @@
 <!-- regenerate: on (set to off if you edit this file) -->
 
-# TODO - Your title
+# OAuth 2.0 Audience-Bound Client Authorization
 
-This is the working area for the individual Internet-Draft, "TODO - Your title".
+This is the working area for the individual Internet-Draft, "OAuth 2.0 Audience-Bound Client Authorization".
 
-* [Editor's Copy](https://yaron-zehavi.github.io/oauth-audience-bound-token-exchange/#go.draft-zehavi-oauth-audience-bound-token-exchange.html)
+* [Editor's Copy](https://yaron-zehavi.github.io/oauth-audience-bound-token-exchange/#go.draft-zehavi-oauth-audience-bound-client-authorization.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-zehavi-oauth-audience-bound-token-exchange)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-audience-bound-token-exchange)
-* [Compare Editor's Copy to Individual Draft](https://yaron-zehavi.github.io/oauth-audience-bound-token-exchange/#go.draft-zehavi-oauth-audience-bound-token-exchange.diff)
+* [Compare Editor's Copy to Individual Draft](https://yaron-zehavi.github.io/oauth-audience-bound-token-exchange/#go.draft-zehavi-oauth-audience-bound-client-authorization.diff)
 
 
 ## Contributing
@@ -28,4 +28,3 @@ $ make
 
 Command line usage requires that you have the necessary software installed.  See
 [the instructions](https://github.com/martinthomson/i-d-template/blob/main/doc/SETUP.md).
-

@@ -1,0 +1,680 @@
+---
+title: "OAuth 2.0 Audience-Bound Client Authorization"
+abbrev: "Audience-Bound Client Authorization"
+category: std
+
+docname: draft-zehavi-oauth-audience-bound-client-authorization-latest
+submissiontype: IETF
+number:
+date:
+consensus: true
+v: 3
+area: "Security"
+workgroup: "Web Authorization Protocol"
+keyword:
+  - OAuth
+  - token exchange
+  - token introspection
+  - protected resource metadata
+  - audience
+venue:
+  group: "Web Authorization Protocol"
+  type: "Working Group"
+  mail: "oauth@ietf.org"
+  arch: "https://mailarchive.ietf.org/arch/browse/oauth/"
+  github: "yaron-zehavi/oauth-audience-bound-token-exchange"
+  latest: "https://yaron-zehavi.github.io/oauth-audience-bound-token-exchange/draft-zehavi-oauth-audience-bound-client-authorization.html"
+
+author:
+  -
+    fullname: "Yaron Zehavi"
+    organization: Raiffeisen Bank International
+    email: yaron.zehavi@rbinternational.com
+
+normative:
+  RFC2119:
+  RFC8174:
+  RFC6749:
+  RFC7519:
+  RFC7523:
+  RFC7662:
+  RFC8693:
+  RFC9728:
+  I-D.ietf-oauth-client-id-metadata-document:
+    title: "OAuth Client ID Metadata Document"
+    target: https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/
+
+informative:
+  OpenID.Core:
+    title: "OpenID Connect Core 1.0"
+    target: https://openid.net/specs/openid-connect-core-1_0.html
+    author:
+      - name: N. Sakimura
+      - name: J. Bradley
+      - name: M. Jones
+      - name: B. de Medeiros
+      - name: C. Mortimore
+    date: 2014-11-08
+
+--- abstract
+
+OAuth 2.0 access tokens are commonly audience-restricted to a specific protected resource. Several OAuth operations are performed by a client on behalf of that protected resource and act on such a token, including OAuth 2.0 Token Exchange {{RFC8693}}, in which the protected resource exchanges a received token to call downstream services, and OAuth 2.0 Token Introspection {{RFC7662}}, in which the protected resource asks the authorization server about a received token.
+
+In each case, the authorization server needs to ensure that only a client legitimately representing the token's audience can perform the operation, to prevent misuse of the token by unauthorized parties.
+
+This document defines a model in which authorization to perform such operations is anchored in the audience of the token. An authorization server determines whether the requesting client is associated with the protected resource identified by the token audience, then applies the remaining authorization policy for the requested operation.
+
+This relationship can be established by authorization server local policy, by validating a `private_key_jwt` client authentication assertion using the protected resource's `jwks_uri`, or by using a new OAuth 2.0 Protected Resource Metadata parameter that identifies the OAuth clients representing the protected resource.
+
+This document specifies how the model applies to token exchange and to token introspection, and allows other specifications to apply it to additional operations.
+
+--- middle
+
+# Introduction
+
+OAuth 2.0 access tokens are commonly issued for a specific protected resource, identified by the token's audience, such as the `aud` claim of a JWT access token. Several OAuth operations are performed by a client representing that protected resource and act on such a token. For example:
+
+* A protected resource that needs to call downstream services uses OAuth 2.0 Token Exchange {{RFC8693}} to exchange the received token for a new token with an audience appropriate for the downstream service.
+* A protected resource that receives an opaque token, or that needs current token state, uses OAuth 2.0 Token Introspection {{RFC7662}} to ask the authorization server about the token.
+
+In each case, the authorization server must determine whether the requesting client is permitted to perform the operation on the presented token. Otherwise, unauthorized parties in possession of a token could exchange it for a new token, potentially bypassing the original audience restriction, or learn information about a token that was not intended for them. {{RFC7662}} already requires that an authorization server determine whether a token can be used at the protected resource making the introspection call, but does not define how the relationship between that protected resource and the calling client is established.
+
+Sender-constraining the token to the original client does not address this need, because such proof demonstrates possession by the client to which the token was issued and does not establish that the protected resource receiving the token is permitted to act on it.
+
+The Token Exchange `may_act` claim can explicitly identify an authorized actor. However, the original token issuer cannot know in advance which authorization server will process a later exchange request, or which client identifier that server uses for the protected resource. This makes `may_act` difficult to use when a protected resource calls multiple downstream services protected by different authorization servers.
+
+This document specifies an audience-anchored model for determining whether a client may perform an operation on a token. In this model, the authorization server uses the token's audience to identify the protected resource, establishes whether the requesting client is associated with that protected resource, then applies the remaining authorization policy for the requested operation.
+
+This relationship can be established in three ways.
+
+First, the authorization server can use local policy. For example, the authorization server can be configured to associate a particular client identifier with a particular protected resource.
+
+Second, when the protected resource metadata contains a `jwks_uri`, the authorization server can use the keys referenced by that `jwks_uri` to validate the JWT assertion presented by the client when authenticating using the `private_key_jwt` client authentication method. Successful validation establishes that the client holds a key published by the protected resource identified by the token audience.
+
+Third, the authorization server can use OAuth 2.0 Protected Resource Metadata {{RFC9728}}. This document defines a new protected-resource metadata parameter that allows a protected resource to publish the OAuth client identifiers that represent it at one or more authorization servers.
+
+The authorization server can use any of these mechanisms, together with its own trust and policy checks, to verify that the client is associated with the protected resource identified by the token audience.
+
+This specification does not define a new access token claim, actor chain, actor proof, or actor receipt, nor does it change the semantics of the `act` or `may_act` claims used by OAuth 2.0 Token Exchange. Instead, it defines mechanisms and authorization-server processing rules for establishing the relationship between a token audience and a requesting client, and applies them to token exchange and token introspection.
+
+# Requirements Notation and Conventions
+
+{::boilerplate bcp14-tagged}
+
+# Scope
+
+This specification defines how an authorization server establishes a relationship between the audience of a token and the OAuth client requesting an operation on that token, in order to evaluate whether that client is permitted to perform the operation.
+
+This specification defines:
+
+* how audience values of the token are used to identify the protected resource context;
+* how local policy can establish the relationship between a protected resource audience and a requesting client;
+* how validation of a `private_key_jwt` client assertion using a protected resource's `jwks_uri` can establish that relationship;
+* a protected-resource metadata parameter named `resource_clients`;
+* how an authorization server selects entries from that metadata, and how the selected entry is compared to the requesting client;
+* how this model applies to OAuth 2.0 Token Exchange {{RFC8693}}; and
+* how this model applies to OAuth 2.0 Token Introspection {{RFC7662}}.
+
+Other specifications MAY apply the model defined by this document to additional operations, as described in {{other-applications}}.
+
+This specification does not define:
+
+* a new access token claim;
+* a replacement for the `act` or `may_act` claims defined by {{RFC8693}};
+* actor-chain representation;
+* token exchange grant semantics beyond those already defined by {{RFC8693}}; or
+* token introspection semantics beyond those already defined by {{RFC7662}}.
+
+# Terminology
+
+This document uses the terms "client", "authorization server", "protected resource", "resource server", "access token", and "scope" as defined by OAuth 2.0 {{RFC6749}}.
+
+This document uses the term "token exchange" as defined by {{RFC8693}}, the term "token introspection" as defined by {{RFC7662}}, and the term "protected resource metadata" as defined by {{RFC9728}}.
+
+Audience-Bound Token:
+: The token on which the requesting client asks the authorization server to perform an operation. For token exchange, this is the token presented as the "subject_token" parameter defined by {{RFC8693}}. For token introspection, this is the token presented as the "token" parameter defined by {{RFC7662}}.
+
+Token Audience:
+: The audience value, or values, of the audience-bound token. For JWT tokens, this is the "aud" claim defined by {{RFC7519}}. For other tokens, this is the audience recorded by, or otherwise known to, the authorization server.
+
+Selected Protected Resource Identifier:
+: The single audience value selected by the authorization server as the protected resource context for the request.
+
+Requesting Client:
+: The OAuth client that requests an operation on the audience-bound token, such as token exchange or token introspection.
+
+Audience-Client Relationship:
+: A relationship, accepted by the authorization server, between the selected protected resource identifier and the requesting client.
+
+Authorization-Server Local Client Identifier:
+: A client identifier whose value is scoped to a specific authorization server.
+
+Globally Scoped Client Identifier:
+: A client identifier, such as a Client ID Metadata Document URL {{I-D.ietf-oauth-client-id-metadata-document}}, whose value is not scoped to a specific authorization server.
+
+# Overview
+
+An authorization server processing a request to perform an operation on an audience-bound token needs to determine whether the requesting client is associated with the protected resource identified by the token audience. This document calls this the audience-client relationship.
+
+The audience-client relationship can be established by one or more of the following mechanisms:
+
+1. local policy;
+2. validation of a `private_key_jwt` client assertion presented by the requesting client using keys obtained from the protected resource's `jwks_uri`; or
+3. a `resource_clients` protected-resource metadata parameter.
+
+An authorization server applying this specification performs the following high-level steps:
+
+1. authenticates the requesting client and validates the audience-bound token according to the rules of the requested operation;
+2. determines the selected protected resource identifier from the token audience;
+3. obtains protected-resource metadata for the selected protected resource identifier, if metadata-based processing is used;
+4. establishes the audience-client relationship using local policy, `private_key_jwt` validation, `resource_clients`, or a combination of these mechanisms; and
+5. applies all remaining policy for the requested operation.
+
+The mechanisms defined by this specification only establish that the requesting client is associated with the protected resource identified by the token audience. They do not by themselves authorize any particular operation. In particular, they do not authorize a requested token audience, scopes, subject, actor chain, or delegation semantics in token exchange, and they do not determine which token information is disclosed in a token introspection response.
+
+# Token Audience Processing {#token-audience-processing}
+
+Since a token can have more than one audience value, the authorization server MUST determine the protected resource audience of the audience-bound token before applying this specification.
+
+If the token audience is a single string, the authorization server treats that value as the candidate protected resource identifier.
+
+If the token audience is an array, the authorization server treats each string value in the array as a candidate protected resource identifier.
+
+If the audience-bound token does not have an audience value, or if the authorization server cannot determine the protected resource identifier, it MUST NOT use the metadata processing defined by this specification.
+
+The authorization server MUST identify exactly one selected protected resource identifier with which the requesting client has an audience-client relationship. If no candidate protected resource identifier matches, the authorization server MUST reject the request. If multiple candidate protected resource identifiers match and the authorization server cannot determine the applicable protected resource context unambiguously, the authorization server MUST reject the request.
+
+## HTTPS and Non-HTTPS Audience Values
+
+This specification does not require all token audience values to be HTTPS URIs. However, protected-resource metadata discovery MUST only be performed for candidate protected resource identifiers that are HTTPS URIs and that are acceptable to the authorization server according to local policy.
+
+The authorization server MUST NOT dereference arbitrary non-HTTPS audience values as protected-resource metadata locations.
+
+If a token audience value is not an HTTPS URI, the authorization server MAY use local policy to associate that audience value with a protected resource and with a permitted requesting client.
+
+For example, the following audience value can be used with local policy:
+
+~~~ json
+{
+  "aud": "api://orders"
+}
+~~~
+
+The authorization server can have local policy equivalent to:
+
+~~~ text
+api://orders -> rs-orders-client
+~~~
+
+The authorization server MUST NOT attempt to dereference "api://orders" as protected-resource metadata.
+
+# Establishing the Audience-Client Relationship {#establishing-relationship}
+
+Before performing an operation to which this specification is applied, the authorization server MUST establish a relationship between the selected protected resource identifier and the requesting client.
+
+The authorization server MAY establish the audience-client relationship using one or more of the following mechanisms:
+
+* local policy;
+* validation of a `private_key_jwt` client assertion presented by the requesting client using keys obtained from the protected resource's `jwks_uri`; or
+* the `resource_clients` protected-resource metadata parameter defined by this specification.
+
+An authorization server MAY require more than one mechanism to succeed. For example, an authorization server can require that the client match an entry in `resource_clients` and that the client authenticate using a `private_key_jwt` assertion validated using the protected resource's `jwks_uri`.
+
+If none of the mechanisms accepted by authorization server policy establishes the relationship between the selected protected resource identifier and the requesting client, the authorization server MUST reject the request.
+
+Establishing the audience-client relationship does not by itself authorize the requested operation. The authorization server MUST also apply all other policy applicable to the requested operation. An authorization server MAY permit a client that has an audience-client relationship with a protected resource to perform some operations, such as token introspection, but not others, such as token exchange.
+
+## Local Policy
+
+An authorization server MAY use local policy to determine the requesting client for a selected protected resource identifier. The authorization server MUST compare the requesting client to the client identifier identified by local policy. If the client does not match, the authorization server MUST reject the request.
+
+Local policy can be used for HTTPS and non-HTTPS audience values.
+
+# Metadata Discovery
+
+When the selected protected resource identifier is an HTTPS URI, the authorization server MAY obtain protected-resource metadata for that identifier using OAuth 2.0 Protected Resource Metadata {{RFC9728}}.
+
+The authorization server constructs the protected-resource metadata URL from the selected protected resource identifier as specified in {{RFC9728}}. If the identifier has no path or query component, the metadata URL is formed by appending `/.well-known/oauth-protected-resource` to the origin. For example, the identifier:
+
+`https://resource.example.com`
+
+corresponds to the metadata URL:
+
+`https://resource.example.com/.well-known/oauth-protected-resource`
+
+If the identifier contains a path or query component, the authorization server MUST insert `/.well-known/oauth-protected-resource` after the host component and before the path or query component. The authorization server MUST NOT remove the path component before constructing the metadata URL. For example, the identifier:
+
+`https://resource.example.com/resource1`
+
+corresponds to the metadata URL:
+
+`https://resource.example.com/.well-known/oauth-protected-resource/resource1`
+
+The authorization server MUST NOT attempt alternative metadata URLs formed by stripping the path component, appending the well-known suffix after the path component, or otherwise modifying the selected protected resource identifier, unless such behavior is explicitly configured by local policy. Metadata obtained from a URL other than the one constructed for the selected protected resource identifier MUST NOT be used to establish an audience-client relationship for that protected resource.
+
+## Metadata Verification {#metadata-verification}
+
+The authorization server MUST verify that the "resource" value in the obtained metadata corresponds to the selected protected resource identifier. Metadata whose "resource" value does not correspond to the selected protected resource identifier MUST NOT be used for the authorization decision defined by this specification.
+
+The authorization server MUST NOT use protected-resource metadata as the basis for accepting an otherwise untrusted audience value. The authorization server first determines whether the token audience identifies a protected resource that is acceptable according to local policy. Protected-resource metadata can then be used to establish the relationship between that protected resource audience and the requesting client.
+
+Protected-resource metadata can establish this relationship by publishing a `jwks_uri`, by publishing `resource_clients`, or by publishing both.
+
+When `jwks_uri` is used, the authorization server MUST verify that the `private_key_jwt` client assertion presented by the requesting client validates with a key obtained from the protected resource's JWK Set document, as described in {{private-key-jwt}}.
+
+When `resource_clients` is used, the authorization server MUST verify that the requesting client matches an applicable entry in the `resource_clients` metadata parameter.
+
+The authorization server SHOULD cache protected-resource metadata according to HTTP caching semantics and local policy. Cached metadata MUST NOT be used beyond any applicable expiration time or beyond limits established by local policy.
+
+The authorization server MUST handle metadata retrieval failure as an authorization failure unless local policy provides another permitted method for establishing the audience-client relationship.
+
+## Client Authentication Using `private_key_jwt` and `jwks_uri` {#private-key-jwt}
+
+Protected-resource metadata can contain a `jwks_uri` parameter that identifies the protected resource's JWK Set document.
+
+When the requesting client authenticates to the authorization server using the `private_key_jwt` client authentication method {{OpenID.Core}}, that is, using a JWT client assertion as defined in {{Section 2.2 of RFC7523}}, the authorization server MAY validate the client assertion using the keys referenced by the `jwks_uri` in the protected-resource metadata for the selected protected resource identifier.
+
+This mechanism applies at any authorization server endpoint at which the requesting client authenticates using `private_key_jwt`, including the token endpoint used for token exchange and the introspection endpoint.
+
+If the client assertion validates using a key obtained from that `jwks_uri`, the authorization server MAY treat this validation as establishing the audience-client relationship, because the requesting client has demonstrated possession of a private key whose public key is published by the protected resource identified by the token audience.
+
+When using this mechanism, the authorization server MUST verify the protected-resource metadata as described in {{metadata-verification}} before using the `jwks_uri`.
+
+The authorization server MUST validate the client assertion according to {{Section 3 of RFC7523}} and local policy, including validation of the signature, issuer, subject, audience, expiration time, and any other claims required by local policy. As required by {{RFC7523}}, the "iss" and "sub" claims of the client assertion identify the requesting client by its client identifier.
+
+A protected resource that relies on `private_key_jwt` validation through `jwks_uri` MAY omit the `resource_clients` metadata parameter. In such a case, the authorization server relies on successful client assertion validation, together with local policy, to establish the audience-client relationship.
+
+If the protected-resource metadata includes both `jwks_uri` and `resource_clients`, the authorization server SHOULD verify that the client identifier in the client assertion is consistent with an applicable `resource_clients` entry. If the values are inconsistent, the authorization server MUST reject the request unless local policy explicitly allows the `jwks_uri`-based mechanism to take precedence.
+
+# Protected Resource Metadata
+
+## `resource_clients` Metadata Parameter
+
+This specification defines the "resource_clients" protected-resource metadata parameter. This parameter is one mechanism for establishing the relationship between a protected resource audience and a requesting client. A protected resource MAY omit this parameter when the authorization server can establish the relationship by local policy or by validating a `private_key_jwt` client assertion using the protected resource's `jwks_uri`.
+
+The "resource_clients" parameter is a JSON array. Each array element is a JSON object identifying an OAuth client that represents the protected resource when requesting operations on tokens whose audience identifies the protected resource.
+
+Each array element has the following attributes:
+
+authorization_server:
+: OPTIONAL. An issuer identifier for the authorization server at which the "client_id" value is scoped. This attribute is REQUIRED when the "client_id" is an authorization-server local client identifier. This attribute MUST be omitted when the "client_id" is a globally scoped client identifier.
+
+client_id:
+: REQUIRED. The OAuth client identifier that represents the protected resource.
+
+If the "authorization_server" attribute is present, the "client_id" value is scoped to the authorization server identified by that attribute.
+
+If the "authorization_server" attribute is omitted, the "client_id" value is a globally scoped client identifier.
+
+An authorization server MUST ignore any attribute of a "resource_clients" entry that it does not understand.
+
+The "resource_clients" parameter identifies clients that represent the protected resource. It does not identify which operations those clients are permitted to perform. The set of operations a client identified by "resource_clients" can perform is determined by the authorization server's policy.
+
+## Metadata Example
+
+The following example shows a protected resource that publishes both `jwks_uri` and `resource_clients`. The `jwks_uri` enables `private_key_jwt`-based establishment of the audience-client relationship. The `resource_clients` parameter explicitly identifies clients that represent the protected resource at two authorization servers and by a globally scoped client identifier:
+
+~~~ json
+{
+  "resource": "https://api.example.com",
+  "authorization_servers": [
+    "https://as-a.example",
+    "https://as-b.example"
+  ],
+  "jwks_uri": "https://api.example.com/jwks.json",
+  "resource_clients": [
+    {
+      "authorization_server": "https://as-a.example",
+      "client_id": "rs-client-at-as-a"
+    },
+    {
+      "authorization_server": "https://as-b.example",
+      "client_id": "rs-client-at-as-b"
+    },
+    {
+      "client_id": "https://api.example.com/oauth-client"
+    }
+  ]
+}
+~~~
+
+The following example shows a protected resource that relies on `private_key_jwt`-based establishment of the audience-client relationship and therefore omits `resource_clients`:
+
+~~~ json
+{
+  "resource": "https://api.example.com",
+  "authorization_servers": [
+    "https://as-a.example"
+  ],
+  "jwks_uri": "https://api.example.com/jwks.json"
+}
+~~~
+
+## Selecting a Resource Client Entry
+
+After obtaining protected-resource metadata containing "resource_clients", the authorization server selects an applicable entry as follows.
+
+If an entry contains an "authorization_server" attribute, the authorization server MUST use the entry only if the "authorization_server" value identifies the authorization server processing the request.
+
+If an entry omits the "authorization_server" attribute, the authorization server MUST treat the "client_id" as a globally scoped client identifier.
+
+If no applicable entry is found, the authorization server MUST reject the request unless another mechanism accepted by authorization server policy establishes the audience-client relationship.
+
+If multiple applicable entries are found and the authorization server cannot select a single entry unambiguously, the authorization server MUST reject the request.
+
+## Client Comparison
+
+When the audience-client relationship is established using `resource_clients`, the authorization server MUST compare the requesting client to the `client_id` value in the selected `resource_clients` entry.
+
+When the selected entry contains an `authorization_server` attribute, the comparison is made against the authorization-server local client identifier of the requesting client.
+
+When the selected entry omits the `authorization_server` attribute, the `client_id` value is a globally scoped client identifier. The authorization server MUST verify that the requesting client is bound to the globally scoped client identifier.
+
+If both `private_key_jwt` validation using `jwks_uri` and `resource_clients` are used, the authorization server MUST verify that the client identifier in the client assertion is consistent with the applicable `resource_clients` entry. If the values are inconsistent, the authorization server MUST reject the request unless local policy explicitly allows one mechanism to take precedence.
+
+If the authorization server cannot establish that the requesting client matches, or is bound to, the client associated with the selected protected resource identifier, the authorization server MUST reject the request.
+
+# Application to Token Exchange {#token-exchange}
+
+This section applies the model defined by this specification to OAuth 2.0 Token Exchange {{RFC8693}}. The audience-bound token is the subject token, and the requesting client is the client making the token exchange request.
+
+## Token Exchange Processing
+
+At token exchange time, the authorization server performs the following checks:
+
+1. Validate the token exchange request according to {{RFC8693}} and local policy.
+2. Authenticate or otherwise identify the client making the token exchange request according to OAuth 2.0 and authorization server policy.
+3. Validate the subject token according to token format, issuer, audience, expiration, and local policy.
+4. Determine the selected protected resource identifier from the subject token audience, as described in {{token-audience-processing}}.
+5. Verify that the selected protected resource identifier is acceptable to the authorization server according to local policy.
+6. If metadata-based processing is used, obtain and verify protected-resource metadata for the selected protected resource identifier.
+7. Establish the audience-client relationship as described in {{establishing-relationship}}.
+8. If the relationship cannot be established, reject the request.
+9. If the subject token contains a `may_act` claim, evaluate it according to {{RFC8693}} and local policy, as described in {{may-act}}.
+10. Apply all remaining token exchange authorization policy, including policy for the requested audience, resource, scope, subject, actor, delegation model, and consent.
+11. Issue the exchanged token only if all checks succeed.
+
+Use of the mechanisms defined by this specification only establishes that the requesting client is associated with the subject token audience. It does not authorize the issuance of a token for any particular requested resource, scope, subject, or actor chain.
+
+## Token Exchange Error Handling
+
+If the authorization server rejects the token exchange request because the requesting client is not permitted to exchange the subject token under this specification, the authorization server SHOULD return the "invalid_request" or "invalid_grant" error code defined by {{RFC8693}}, according to the nature of the failure and local policy.
+
+The authorization server SHOULD NOT disclose sensitive information about protected-resource metadata, configured mappings, keys, or permitted client identifiers in error responses.
+
+For example, the authorization server can return:
+
+~~~ http-message
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{
+  "error": "invalid_grant",
+  "error_description": "The subject token cannot be exchanged by the client."
+}
+~~~
+
+## Relationship to `may_act` {#may-act}
+
+The `may_act` claim defined by {{RFC8693}} identifies an actor that is authorized to act with respect to the subject token. It is appropriate when the issuer of the subject token knows the authorized actor at token issuance time.
+
+If the subject token contains a `may_act` claim, the authorization server MUST evaluate it according to {{RFC8693}} and local policy. A `may_act` claim that identifies a permitted actor takes precedence over the audience-client relationship mechanisms defined in this specification for determining which actor is explicitly authorized by the subject token.
+
+This specification does not replace `may_act`. An authorization server MAY require both:
+
+* that the requesting client satisfy the audience-client relationship defined by this specification; and
+* that the subject token contain an appropriate `may_act` claim.
+
+An authorization server MAY also use this specification without a `may_act` claim when local policy permits audience-anchored token exchange.
+
+When the audience-client relationship is established using a `private_key_jwt` client assertion validated with the protected resource's `jwks_uri`, that validation does not itself create or replace a `may_act` claim. It only establishes that the requesting client is associated with the protected resource identified by the subject token audience. An authorization server can still require an appropriate `may_act` claim when its policy requires explicit actor authorization in the subject token.
+
+# Application to Token Introspection {#token-introspection}
+
+This section applies the model defined by this specification to OAuth 2.0 Token Introspection {{RFC7662}}. The audience-bound token is the token presented in the "token" parameter of the introspection request, and the requesting client is the client authenticating to the introspection endpoint on behalf of a protected resource.
+
+{{Section 4 of RFC7662}} requires that, if a token can be used only at certain resource servers, the authorization server determine whether the token can be used at the resource server making the introspection call. This specification provides interoperable mechanisms for making that determination when the protected resource is identified by the token audience and the caller is identified by its OAuth client identifier.
+
+## Token Introspection Processing
+
+When processing an introspection request, the authorization server performs the following checks:
+
+1. Authenticate the client making the introspection request according to {{RFC7662}} and authorization server policy.
+2. Determine whether the token is active, according to {{RFC7662}}.
+3. Determine the selected protected resource identifier from the token audience, as described in {{token-audience-processing}}.
+4. Verify that the selected protected resource identifier is acceptable to the authorization server according to local policy.
+5. If metadata-based processing is used, obtain and verify protected-resource metadata for the selected protected resource identifier.
+6. Establish the audience-client relationship as described in {{establishing-relationship}}.
+7. If the relationship cannot be established, treat the token as one the requesting client is not allowed to know about, as described in {{introspection-error-handling}}.
+8. Apply all remaining introspection policy, including policy determining which token information is included in the introspection response.
+
+Establishing the audience-client relationship only establishes that the requesting client is associated with the token audience. It does not by itself determine which information about the token the authorization server discloses in the introspection response.
+
+## Token Introspection Error Handling {#introspection-error-handling}
+
+If the authorization server cannot establish an audience-client relationship between the selected protected resource identifier and the requesting client, the authorization server MUST NOT return information about the token other than an indication that it is not active. As described in {{Section 2.2 of RFC7662}} and {{Section 2.3 of RFC7662}}, a properly formed and authorized introspection request for a token that the protected resource is not allowed to know about is not considered an error, and the authorization server responds with an inactive token response.
+
+For example, the authorization server can return:
+
+~~~ http-message
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "active": false
+}
+~~~
+
+The authorization server SHOULD NOT disclose, through the introspection response or any other observable behavior, whether the request failed because the token is inactive or because the audience-client relationship could not be established.
+
+# Other Applications {#other-applications}
+
+Other specifications MAY apply the model defined by this specification to additional operations in which a client requests an authorization server to act on an audience-bound token on behalf of the protected resource identified by the token audience.
+
+A specification applying this model SHOULD define:
+
+* which token in the request is the audience-bound token;
+* which client is the requesting client;
+* the processing steps for the operation, including where establishment of the audience-client relationship occurs relative to other checks; and
+* the response to be returned when the audience-client relationship cannot be established.
+
+# Security Considerations
+
+## Protected Resource Metadata Does Not Establish Audience Validity
+
+An authorization server MUST NOT treat protected-resource metadata, including `jwks_uri` or `resource_clients`, as establishing that an audience value is valid. The authorization server MUST first determine, according to its own policy, that the token audience identifies a protected resource for which the authorization server is willing to process the requested operation. Only then can the authorization server use protected-resource metadata associated with that audience to establish the relationship between the protected resource and the requesting client.
+
+If an attacker can cause an authorization server to issue a token with an attacker-controlled audience, the attacker might also control the protected-resource metadata for that audience. In such a case, the metadata can legitimately identify an attacker-controlled client as the client representing that audience. This specification relies on the authorization server's existing audience and resource policy to prevent such an audience from being used to obtain tokens for unrelated resources or information about unrelated tokens.
+
+The mechanisms defined by this specification only establish that a requesting client is associated with the token audience. They do not authorize issuance of a token for any particular requested resource, scope, subject, or actor chain, and they do not determine what token information is disclosed by introspection.
+
+Authorization servers MUST apply independent policy to the requested operation before performing it.
+
+## Different Operations Have Different Risk
+
+Operations to which this specification applies carry different risks. Token introspection discloses information about a token to the requesting client, while token exchange issues a new token that can be used at other protected resources.
+
+The `resource_clients` metadata parameter identifies clients that represent a protected resource, not the operations those clients are permitted to perform. An authorization server SHOULD determine, according to local policy, which operations each client with an established audience-client relationship is permitted to perform, and SHOULD NOT permit an operation, such as token exchange, solely because the audience-client relationship has been established.
+
+## Metadata Substitution
+
+An authorization server MUST verify that the "resource" value in the protected-resource metadata corresponds to the selected protected resource identifier. Metadata whose "resource" value does not correspond to the selected protected resource identifier MUST NOT be used.
+
+If an attacker can substitute protected-resource metadata, the attacker could cause the authorization server to use an attacker-controlled `jwks_uri` or attacker-controlled `resource_clients` value. Therefore, the authorization server MUST verify that the obtained metadata is the metadata for the selected protected resource identifier and MUST follow the discovery and validation rules of {{RFC9728}}.
+
+Authorization servers SHOULD use HTTPS, normal certificate validation, and the discovery and verification rules of {{RFC9728}} when obtaining protected-resource metadata.
+
+## Protected Resource Key Compromise
+
+When the audience-client relationship is established using `private_key_jwt` and the protected resource's `jwks_uri`, any party holding a private key corresponding to a key in that JWK Set can establish an audience-client relationship with the protected resource. Protected resources SHOULD protect such private keys accordingly, and SHOULD use keys in that JWK Set only for purposes for which they are intended to be trusted.
+
+## Server-Side Request Forgery
+
+Dereferencing protected-resource metadata can create a server-side request forgery risk. An authorization server MUST NOT dereference arbitrary audience values supplied by an attacker, a client, or an untrusted token issuer.
+
+Protected-resource metadata discovery defined by this specification MUST only be performed for HTTPS audience values that the authorization server has already determined to be acceptable according to local policy.
+
+Authorization servers SHOULD apply additional fetch protections, including:
+
+* rejecting private, loopback, link-local, and otherwise prohibited network destinations unless explicitly allowed by local policy;
+* limiting redirects;
+* enforcing response size limits;
+* enforcing timeouts;
+* caching validated metadata; and
+* avoiding inclusion of sensitive request headers when fetching metadata.
+
+## Multiple Audience Values
+
+If a token contains multiple audience values, the authorization server MUST determine a single selected protected resource identifier. If the authorization server cannot determine the protected resource context unambiguously, it MUST reject the request.
+
+This prevents a client associated with one audience from using that relationship to perform an operation under a different audience context.
+
+## Confidentiality of Metadata
+
+The "resource_clients" metadata parameter can reveal information about the internal topology, client registrations, or downstream call patterns of a protected resource. A `jwks_uri` can reveal information about the key material used by a protected resource to establish the audience-client relationship.
+
+Protected resources should publish this metadata only when the operational benefits outweigh the disclosure risk.
+
+Deployments that consider this information sensitive can use local authorization server policy instead of public metadata discovery, or can restrict metadata publication according to mechanisms outside the scope of this specification.
+
+# IANA Considerations
+
+## OAuth Protected Resource Metadata Registration
+
+IANA is requested to register the following value in the "OAuth Protected Resource Metadata" registry established by {{RFC9728}}.
+
+Metadata Name:
+: resource_clients
+
+Metadata Description:
+: JSON array identifying OAuth clients that represent the protected resource when requesting operations, such as OAuth 2.0 Token Exchange or OAuth 2.0 Token Introspection, on tokens whose audience identifies the protected resource. This parameter is one mechanism for establishing the relationship between a token audience and a requesting client.
+
+Change Controller:
+: IETF
+
+Specification Document(s):
+: This document
+
+# Acknowledgements
+
+The authors would like to thank the following individuals who contributed ideas, feedback, and wording that helped shape the final specification: Henrik Kroll.
+
+--- back
+
+# Examples
+
+## Example: Token Exchange Using `resource_clients`
+
+In this example, a client calls a protected resource with an access token whose audience is "https://api.example.com":
+
+~~~ json
+{
+  "iss": "https://issuer.example",
+  "sub": "248289761001",
+  "aud": "https://api.example.com",
+  "scope": "read write",
+  "exp": 1710000000
+}
+~~~
+
+The protected resource needs to call a downstream service protected by "https://as-a.example". The protected resource authenticates to "https://as-a.example" as the OAuth client "rs-client-at-as-a" and makes a token exchange request.
+
+The authorization server obtains protected-resource metadata for "https://api.example.com" and receives:
+
+~~~ json
+{
+  "resource": "https://api.example.com",
+  "authorization_servers": [
+    "https://as-a.example"
+  ],
+  "resource_clients": [
+    {
+      "authorization_server": "https://as-a.example",
+      "client_id": "rs-client-at-as-a"
+    }
+  ]
+}
+~~~
+
+The authorization server verifies that:
+
+* the subject token is valid;
+* the subject token audience is "https://api.example.com";
+* the protected-resource metadata "resource" value corresponds to "https://api.example.com";
+* the selected "resource_clients" entry is scoped to "https://as-a.example";
+* the requesting client is "rs-client-at-as-a"; and
+* all other token exchange policy permits issuing the requested token.
+
+If all checks succeed, the authorization server issues the exchanged token.
+
+## Example: Token Introspection Using `private_key_jwt` and `jwks_uri`
+
+In this example, a protected resource publishes a `jwks_uri` but omits `resource_clients`:
+
+~~~ json
+{
+  "resource": "https://api.example.com",
+  "authorization_servers": [
+    "https://as-a.example"
+  ],
+  "jwks_uri": "https://api.example.com/jwks.json"
+}
+~~~
+
+The protected resource receives an opaque access token issued by "https://as-a.example". The protected resource calls the introspection endpoint of "https://as-a.example", authenticating as client "rs-client-at-as-a" using `private_key_jwt`, with a client assertion signed using a private key whose public key is published at "https://api.example.com/jwks.json":
+
+~~~ http-message
+POST /introspect HTTP/1.1
+Host: as-a.example
+Content-Type: application/x-www-form-urlencoded
+
+token=mF_9.B5f-4.1JqM&
+client_assertion_type=
+urn%3Aietf%3Aparams%3Aoauth%3Aclient-assertion-type%3Ajwt-bearer&
+client_assertion=eyJhbGciOiJFUzI1NiIsImtpZCI6InJzLWtleS0xIn0...
+~~~
+
+The authorization server looks up the token and determines that it is active and that its audience is "https://api.example.com". It obtains the protected-resource metadata for "https://api.example.com", verifies that the metadata `resource` value corresponds to the token audience, retrieves the JWK Set from the `jwks_uri`, and validates the client assertion using a key from that JWK Set.
+
+If the client assertion is valid, the authorization server treats the audience-client relationship as established and returns an introspection response according to its introspection policy. Otherwise, the authorization server returns a response indicating that the token is not active.
+
+## Example: Token Exchange Using `private_key_jwt`, `jwks_uri`, and `resource_clients`
+
+In this example, a protected resource publishes both `jwks_uri` and `resource_clients`:
+
+~~~ json
+{
+  "resource": "https://api.example.com",
+  "authorization_servers": [
+    "https://as-a.example"
+  ],
+  "jwks_uri": "https://api.example.com/jwks.json",
+  "resource_clients": [
+    {
+      "authorization_server": "https://as-a.example",
+      "client_id": "rs-client-at-as-a"
+    }
+  ]
+}
+~~~
+
+The requesting client authenticates to the token endpoint using `private_key_jwt` and makes a token exchange request. The authorization server validates the client assertion using the JWK Set obtained from "https://api.example.com/jwks.json".
+
+The authorization server also verifies that the client identifier in the client assertion, "rs-client-at-as-a", is consistent with the applicable `resource_clients` entry. If the client assertion identifies a different client and local policy does not explicitly allow one mechanism to take precedence, the authorization server rejects the request.
+
+# Document History
+
+-01
+
+* Broadened scope from token exchange to any operation in which a client acts on a token on behalf of the protected resource identified by its audience.
+* Changed title to "OAuth 2.0 Audience-Bound Client Authorization".
+* Added application of the model to OAuth 2.0 Token Introspection.
+* Added guidance for applying the model to other operations.
+* Renamed the `token_exchange_clients` protected-resource metadata parameter to `resource_clients`.
+* Restricted the `jwks_uri` mechanism to `private_key_jwt` client authentication, applicable at any authorization server endpoint.
+* Aligned the strength of the consistency requirement between `jwks_uri` and `resource_clients` mechanisms.
+* Added security considerations for differing operation risk and protected resource key compromise.
+
+-00
+
+* Initial version.
